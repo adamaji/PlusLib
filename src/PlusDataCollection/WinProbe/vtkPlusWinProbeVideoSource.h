@@ -28,7 +28,7 @@ public:
   /*! Constructor for a smart pointer of this class*/
   static vtkPlusWinProbeVideoSource* New();
   vtkTypeMacro(vtkPlusWinProbeVideoSource, vtkPlusDevice);
-  virtual void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  virtual void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /*! Specify the device connected to this class */
   virtual bool IsTracker() const { return false; }
@@ -57,7 +57,7 @@ public:
   /* Get the scan depth of US probe (mm) */
   float GetScanDepthMm();
 
-   /* Set the scan depth of US probe (mm) */
+  /* Set the scan depth of US probe (mm) */
   PlusStatus SetSSDecimation(uint8_t value);
 
   /* Get the scan depth of US probe (mm) */
@@ -150,6 +150,9 @@ public:
   void SetBRFEnabled(bool value);
   bool GetBRFEnabled();
 
+  void SetPWModeEnabled(bool value);
+  bool GetPWModeEnabled();
+
   void SetMModeEnabled(bool value);
   bool GetMModeEnabled();
 
@@ -173,6 +176,12 @@ public:
 
   void SetMDepth(int32_t value);
   int32_t GetMDepth();
+
+  void SetPWDopplerLine(uint16_t value);
+  uint16_t GetPWDopplerLine();
+
+  void SetPWLineAngle(int32_t value);
+  int32_t GetPWLineAngle();
 
   void SetBFrameRateLimit(int32_t value);
   int32_t GetBFrameRateLimit();
@@ -218,16 +227,16 @@ protected:
   ~vtkPlusWinProbeVideoSource();
 
   /*! Device-specific connect */
-  virtual PlusStatus InternalConnect() VTK_OVERRIDE;
+  PlusStatus InternalConnect() override;
 
   /*! Device-specific disconnect */
-  virtual PlusStatus InternalDisconnect() VTK_OVERRIDE;
+  PlusStatus InternalDisconnect() override;
 
   /*! Device-specific recording start */
-  virtual PlusStatus InternalStartRecording() VTK_OVERRIDE;
+  PlusStatus InternalStartRecording() override;
 
   /*! Device-specific recording stop */
-  virtual PlusStatus InternalStopRecording() VTK_OVERRIDE;
+  PlusStatus InternalStopRecording() override;
 
   /*! Updates internal spacing based on current depth */
   void AdjustSpacing(bool value);
@@ -255,8 +264,8 @@ protected:
   std::vector<uint8_t> m_ExtraBuffer;
   bool m_UseDeviceFrameReconstruction = true;
   igsioFieldMapType m_CustomFields;
-  double m_TimeGainCompensation[8];
-  float m_FocalPointDepth[4];
+  double m_TimeGainCompensation[8] = { 0 };
+  float m_FocalPointDepth[4] = { 0 };
   uint16_t m_MinValue = 16; //noise floor
   uint16_t m_MaxValue = 16384; //maximum typical value
   uint16_t m_Knee = 4096; // threshold value for switching from log to linear
@@ -271,6 +280,8 @@ protected:
   int32_t m_MWidth = 256;
   int32_t m_MAcousticLineCount = 0;
   int32_t m_MDepth = 0;
+  uint16_t m_PWDopplerLine = 64;
+  int32_t m_PWLineAngle = 0;
   uint8_t m_SSDecimation = 2;
   double m_FirstGainValue = 15;
   int32_t m_BFrameRateLimit = 0;

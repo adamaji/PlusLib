@@ -72,6 +72,8 @@ PlusStatus vtkPlusWinProbeVideoSource::ReadConfiguration(vtkXMLDataElement* root
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int32_t, MWidthLines, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, MAcousticLineCount, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, MDepth, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int32_t, PWLineAngle, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(unsigned long, PWDopplerLine, deviceConfig); //implicit type conversion
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(unsigned long, Voltage, deviceConfig); //implicit type conversion
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(unsigned long, MinValue, deviceConfig); //implicit type conversion
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(unsigned long, MaxValue, deviceConfig); //implicit type conversion
@@ -126,6 +128,8 @@ PlusStatus vtkPlusWinProbeVideoSource::WriteConfiguration(vtkXMLDataElement* roo
   deviceConfig->SetIntAttribute("MWidthLines", this->m_MWidth);
   deviceConfig->SetIntAttribute("MAcousticLineCount", this->GetMAcousticLineCount());
   deviceConfig->SetIntAttribute("MDepth", this->GetMDepth());
+  deviceConfig->SetIntAttribute("PWLineAngle", this->GetPWLineAngle());
+  deviceConfig->SetUnsignedLongAttribute("PWDopplerLine", this->GetPWDopplerLine());
   deviceConfig->SetUnsignedLongAttribute("Voltage", this->GetVoltage());
   deviceConfig->SetUnsignedLongAttribute("MinValue", this->GetMinValue());
   deviceConfig->SetUnsignedLongAttribute("MaxValue", this->GetMaxValue());
@@ -376,7 +380,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   if(header->TotalFrameCounter == 0)
   {
     first_timestamp = header->TimeStamp / 1000.0;
-    LOG_DEBUG("First frame timestamp: "<< first_timestamp);
+    LOG_DEBUG("First frame timestamp: " << first_timestamp);
   }
   //timestamp counters are in milliseconds since last sequencer restart
   double timestamp = (header->TimeStamp / 1000.0) - first_timestamp;
@@ -443,7 +447,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
         int slicePitch;
         int rowPitch;
         int tLength = WPDXGetFusedTexData(&texture, &slicePitch, &rowPitch);
-        if (tLength != frameSize[0] * rowPitch)
+        if(tLength != frameSize[0] * rowPitch)
         {
           LOG_ERROR("B Mode texture data does not match frame size");
         }
@@ -1191,6 +1195,88 @@ bool vtkPlusWinProbeVideoSource::GetBHarmonicEnabled()
 
 //----------------------------------------------------------------------------
 
+void vtkPlusWinProbeVideoSource::SetPWDopplerLine(uint16_t value)
+{
+  if(Connected)
+  {
+    SetPWPWDopplerLine(value);
+    SetPendingRecreateTables(true);
+  }
+  m_PWDopplerLine = GetPWDopplerLine();
+}
+
+uint16_t vtkPlusWinProbeVideoSource::GetPWDopplerLine()
+{
+  if(Connected)
+  {
+    m_PWDopplerLine = GetPWDopplerLine();
+  }
+  return m_PWDopplerLine;
+}
+
+void vtkPlusWinProbeVideoSource::SetPWLineAngle(int32_t value)
+{
+  if(Connected)
+  {
+    ::SetPWLineAngle(value);
+    SetPendingRecreateTables(true);
+  }
+  m_PWLineAngle = this->GetPWLineAngle();
+}
+
+int32_t vtkPlusWinProbeVideoSource::GetPWLineAngle()
+{
+  if(Connected)
+  {
+    m_PWLineAngle = ::GetPWLineAngle();
+  }
+  return m_PWLineAngle;
+}
+
+
+void vtkPlusWinProbeVideoSource::SetPWModeEnabled(bool value)
+{
+  if(Connected)
+  {
+    if(m_Mode == Mode::BRF)
+    {
+      SetBRFEnabled(false);
+    }
+    SetPWIsEnabled(value);
+    if(value)
+    {
+      SetPWDopplerLine(m_PWDopplerLine);
+      SetPWLineAngle(m_PWLineAngle);
+    }
+    SetPendingRecreateTables(true);
+    LOG_INFO("PW-Mode enabled");
+  }
+  if(value)
+  {
+    m_Mode = Mode::PW;
+  }
+  else
+  {
+    m_Mode = Mode::B;
+  }
+}
+
+bool vtkPlusWinProbeVideoSource::GetPWModeEnabled()
+{
+  bool pwModeEnabled = (m_Mode == Mode::PW);
+  if(Connected)
+  {
+    pwModeEnabled = GetPWIsEnabled();
+    if(pwModeEnabled)
+    {
+      m_Mode = Mode::PW;
+    }
+  }
+  return pwModeEnabled;
+}
+
+//----------------------------------------------------------------------------
+
 void vtkPlusWinProbeVideoSource::SetMModeEnabled(bool value)
 {
   if(Connected)
@@ -1234,7 +1320,6 @@ bool vtkPlusWinProbeVideoSource::GetMModeEnabled()
   }
   return mmodeEnabled;
 }
-
 
 void vtkPlusWinProbeVideoSource::SetMRevolvingEnabled(bool value)
 {
@@ -1372,6 +1457,7 @@ int32_t vtkPlusWinProbeVideoSource::GetMDepth()
   return m_MDepth;
 }
 
+
 //----------------------------------------------------------------------------
 PlusStatus vtkPlusWinProbeVideoSource::SetTransducerID(std::string guid)
 {
@@ -1429,7 +1515,7 @@ std::string vtkPlusWinProbeVideoSource::GetTransducerID()
 
 void vtkPlusWinProbeVideoSource::SetBFrameRateLimit(int32_t value)
 {
-  if (Connected)
+  if(Connected)
   {
     ::SetBFrameRateLimit(value);
   }
@@ -1438,7 +1524,7 @@ void vtkPlusWinProbeVideoSource::SetBFrameRateLimit(int32_t value)
 
 int32_t vtkPlusWinProbeVideoSource::GetBFrameRateLimit()
 {
-  if (Connected)
+  if(Connected)
   {
     m_BFrameRateLimit = ::GetBFrameRateLimit();
   }

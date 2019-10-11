@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 
 
   vtkSmartPointer< vtkPlusWinProbeVideoSource > WinProbeDevice = vtkSmartPointer< vtkPlusWinProbeVideoSource >::New();
-  WinProbeDevice->SetDeviceId("VideoDeviceWP");
+  WinProbeDevice->SetDeviceId("VideoDeviceLinearArray");
 
   vtkSmartPointer<vtkXMLDataElement> configRootElement = vtkSmartPointer<vtkXMLDataElement>::New();
   if(STRCASECMP(inputConfigFileName.c_str(), "") != 0)

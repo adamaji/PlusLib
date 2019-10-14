@@ -259,7 +259,7 @@ protected:
   double first_timestamp = 0;
   double m_LastTimestamp = 1000; //used to determine timer restarts and to update timestamp offset
   unsigned m_LineCount = 128;
-  unsigned m_SamplesPerLine = 0;
+  unsigned m_SamplesPerLine = 256;
   std::vector<uint8_t> m_PrimaryBuffer;
   std::vector<uint8_t> m_ExtraBuffer;
   bool m_UseDeviceFrameReconstruction = true;

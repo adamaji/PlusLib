@@ -784,11 +784,11 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
   else if(m_Mode == Mode::PW)
   {
     SetPWIsEnabled(true);
-    SetPWPRF(m_MPRF);
-    SetPWPWDopplerLine(m_PWDopplerLine);
-    ::SetPWLineAngle(m_PWLineAngle);
+    //SetPWPRF(m_MPRF);
+    //SetPWPWDopplerLine(m_PWDopplerLine);
+    //::SetPWLineAngle(m_PWLineAngle);
     SetPWNumberOfImageLines(m_LineCount);
-    SetPWNumberOfImageSamples(m_MWidth);
+    //SetPWNumberOfImageSamples(m_MWidth);
   }
 
   m_TimestampOffset = vtkIGSIOAccurateTimer::GetSystemTime();

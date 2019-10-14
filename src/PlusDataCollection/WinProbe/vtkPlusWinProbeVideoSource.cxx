@@ -345,10 +345,18 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       AdjustSpacing(true);
     }
   }
-  else if(usMode & M_PostProcess)
+  else if(usMode & M_PostProcess || usMode & PWD_PostProcess)
   {
-    frameSize[0] = mGeometry->LineCount;
-    frameSize[1] = mGeometry->SamplesPerLine;
+    if(usMode & M_PostProcess)
+    {
+      frameSize[0] = mGeometry->LineCount;
+      frameSize[1] = mGeometry->SamplesPerLine;
+    }
+    else
+    {
+      frameSize[0] = pwGeometry->NumberOfImageLines;
+      frameSize[1] = pwGeometry->NumberOfImageSamples;
+    }
     if(m_ExtraSources.empty())
     {
       return; //the source is not defined, do not waste time on processing this frame
@@ -366,11 +374,6 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       LOG_INFO("Scan Depth changed. Adjusting spacing.");
       AdjustSpacing(false);
     }
-  }
-  else if(usMode & PWD_PostProcess)
-  {
-    frameSize[0] = pwGeometry->NumberOfImageLines;
-    frameSize[1] = pwGeometry->NumberOfImageSamples;
   }
   else
   {
@@ -400,6 +403,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
 
   if(usMode & B && !m_PrimarySources.empty() // B-mode and primary source is defined
       || usMode & M_PostProcess && !m_ExtraSources.empty() // M-mode and extra source is defined
+      || usMode & PWD_PostProcess && !m_ExtraSources.empty() // PW-mode and extra source is defined
       || usMode & BFRFALineImage_SampleData && !m_PrimarySources.empty()  // B-mode and primary source is defined, if in RF/BRF mode
     )
   {
@@ -422,7 +426,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     }
     else
     {
-      if(usMode & M_PostProcess)
+      if(usMode & M_PostProcess || usMode & PWD_PostProcess)
       {
         this->ReconstructFrame(data, m_ExtraBuffer, frameSize);
         for(unsigned i = 0; i < m_ExtraSources.size(); i++)
@@ -505,6 +509,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   else if(usMode & CFD)
   {
     //TODO
+    return;
   }
   else
   {
@@ -548,7 +553,7 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
       m_ExtraSources[i]->SetInputImageOrientation(US_IMG_ORIENT_FM);
       m_ExtraBuffer.swap(std::vector<uint8_t>()); // deallocate the buffer
     }
-    else if(m_Mode == Mode::M)
+    else if(m_Mode == Mode::M || m_Mode == Mode::PW)
     {
       frameSize[0] = m_MWidth;
       m_ExtraSources[i]->SetPixelType(VTK_UNSIGNED_CHAR);
@@ -775,6 +780,15 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
     SetMAcousticLineIndex(m_MLineIndex);
     ::SetMWidth(m_MWidth);
     ::SetMAcousticLineCount(m_MAcousticLineCount);
+  }
+  else if(m_Mode == Mode::PW)
+  {
+    SetPWIsEnabled(true);
+    SetPWPRF(m_MPRF);
+    SetPWPWDopplerLine(m_PWDopplerLine);
+    ::SetPWLineAngle(m_PWLineAngle);
+    SetPWNumberOfImageLines(m_LineCount);
+    SetPWNumberOfImageSamples(m_MWidth);
   }
 
   m_TimestampOffset = vtkIGSIOAccurateTimer::GetSystemTime();

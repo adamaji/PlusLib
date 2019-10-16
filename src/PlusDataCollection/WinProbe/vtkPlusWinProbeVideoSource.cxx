@@ -401,7 +401,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   {
     assert(length == frameSize[0] * frameSize[1] * sizeof(uint16_t) + 16); //frame + header
 
-    if(m_UseDeviceFrameReconstruction)
+    if(usMode & B && m_UseDeviceFrameReconstruction)
     {
       char* frameData = nullptr;
       int length = WPSaveImageToPointer(&frameData);

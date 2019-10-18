@@ -407,8 +407,6 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       || usMode & BFRFALineImage_SampleData && !m_PrimarySources.empty()  // B-mode and primary source is defined, if in RF/BRF mode
     )
   {
-    assert(length == frameSize[0] * frameSize[1] * sizeof(uint16_t) + 16); //frame + header
-
     if(usMode & B && m_UseDeviceFrameReconstruction)
     {
       char* frameData = nullptr;
@@ -426,12 +424,46 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     }
     else
     {
-      if(usMode & M_PostProcess || usMode & PWD_PostProcess)
+      if(usMode & M_PostProcess)
       {
+        assert(length == frameSize[0] * frameSize[1] * sizeof(uint16_t) + 16); //frame + header
         this->ReconstructFrame(data, m_ExtraBuffer, frameSize);
         for(unsigned i = 0; i < m_ExtraSources.size(); i++)
         {
           frameSize[0] = m_MWidth;
+          if(m_ExtraSources[i]->AddItem(&m_ExtraBuffer[0],
+                                        US_IMG_ORIENT_MF,
+                                        frameSize, VTK_UNSIGNED_CHAR,
+                                        1, US_IMG_BRIGHTNESS, 0,
+                                        this->FrameNumber,
+                                        timestamp,
+                                        timestamp, //no timestamp filtering needed
+                                        &this->m_CustomFields) != PLUS_SUCCESS)
+          {
+            LOG_WARNING("Error adding item to extra video source " << m_ExtraSources[i]->GetSourceId());
+          }
+        }
+      }
+      if(usMode & PWD_PostProcess)
+      {
+        frameSize[0] = m_MWidth;
+        assert(length == frameSize[1] * sizeof(uint8_t));
+        assert(frameSize[0] * frameSize[1] == m_ExtraBuffer.size());
+
+        for(unsigned i = 0; i < frameSize[1]; i++)
+        {
+            // shift the image leftwards by one pixel
+            unsigned k = 0;
+            for (; k < frameSize[0] - 1; k++)
+            {
+                m_ExtraBuffer[i * frameSize[0] + k] = m_ExtraBuffer[i * frameSize[0] + k + 1];
+            }
+            // add the newest data to the rightmost pixel
+            m_ExtraBuffer[i * frameSize[0] + k] = data[i];
+        }
+
+        for(unsigned i = 0; i < m_ExtraSources.size(); i++)
+        {
           if(m_ExtraSources[i]->AddItem(&m_ExtraBuffer[0],
                                         US_IMG_ORIENT_MF,
                                         frameSize, VTK_UNSIGNED_CHAR,
@@ -508,7 +540,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   }
   else if(usMode & CFD)
   {
-    //TODO
+    LOG_INFO("Frame ignored. CFD mode not implemented.");
     return;
   }
   else
@@ -560,7 +592,11 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
       m_ExtraSources[i]->SetImageType(US_IMG_BRIGHTNESS);
       m_ExtraSources[i]->SetOutputImageOrientation(US_IMG_ORIENT_MF);
       m_ExtraSources[i]->SetInputImageOrientation(US_IMG_ORIENT_MF);
-      m_ExtraBuffer.resize(m_SamplesPerLine * m_MWidth);
+      if (m_ExtraBuffer.size() != m_SamplesPerLine * m_MWidth)
+      {
+        m_ExtraBuffer.resize(m_SamplesPerLine * m_MWidth);
+        std::fill(m_ExtraBuffer.begin(), m_ExtraBuffer.end(), 0);
+      }
     }
 
     m_ExtraSources[i]->Clear(); // clear current buffer content

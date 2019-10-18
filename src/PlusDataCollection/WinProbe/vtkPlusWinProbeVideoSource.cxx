@@ -444,7 +444,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
           }
         }
       }
-      if(usMode & PWD_PostProcess)
+      else if(usMode & PWD_PostProcess)
       {
         frameSize[0] = m_MWidth;
         assert(length == frameSize[1] * sizeof(uint8_t));
@@ -479,6 +479,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       }
       else // B-mode
       {
+        assert(length == frameSize[0] * frameSize[1] * sizeof(uint16_t) + 16); //frame + header
         char* texture = nullptr;
         int slicePitch;
         int rowPitch;

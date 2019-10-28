@@ -296,7 +296,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   FrameSizeType frameSize;
   if(usMode & BFRFALineImage_RFData)
   {
-    frameSize = { m_PrimaryFrameSize[1] * m_SSDecimation, m_PrimaryFrameSize[0], 1 };
+    frameSize = { m_PrimaryFrameSize[1]* m_SSDecimation, m_PrimaryFrameSize[0], 1 };
   }
   else
   {
@@ -452,14 +452,14 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
 
         for(unsigned i = 0; i < frameSize[1]; i++)
         {
-            // shift the image leftwards by one pixel
-            unsigned k = 0;
-            for (; k < frameSize[0] - 1; k++)
-            {
-                m_ExtraBuffer[i * frameSize[0] + k] = m_ExtraBuffer[i * frameSize[0] + k + 1];
-            }
-            // add the newest data to the rightmost pixel
-            m_ExtraBuffer[i * frameSize[0] + k] = data[i];
+          // shift the image leftwards by one pixel
+          unsigned k = 0;
+          for(; k < frameSize[0] - 1; k++)
+          {
+            m_ExtraBuffer[i * frameSize[0] + k] = m_ExtraBuffer[i * frameSize[0] + k + 1];
+          }
+          // add the newest data to the rightmost pixel
+          m_ExtraBuffer[i * frameSize[0] + k] = data[i];
         }
 
         for(unsigned i = 0; i < m_ExtraSources.size(); i++)
@@ -593,7 +593,7 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
       m_ExtraSources[i]->SetImageType(US_IMG_BRIGHTNESS);
       m_ExtraSources[i]->SetOutputImageOrientation(US_IMG_ORIENT_MF);
       m_ExtraSources[i]->SetInputImageOrientation(US_IMG_ORIENT_MF);
-      if (m_ExtraBuffer.size() != m_ExtraFrameSize[1] * m_ExtraFrameSize[1])
+      if(m_ExtraBuffer.size() != m_ExtraFrameSize[1] * m_ExtraFrameSize[1])
       {
         m_ExtraBuffer.resize(m_ExtraFrameSize[1] * m_ExtraFrameSize[1]);
         std::fill(m_ExtraBuffer.begin(), m_ExtraBuffer.end(), 0);

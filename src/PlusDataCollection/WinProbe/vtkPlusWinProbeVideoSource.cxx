@@ -363,9 +363,9 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     }
     if(frameSize != m_ExtraFrameSize)
     {
-      LOG_INFO("SamplesPerLine has changed from " << m_ExtraFrameSize[1]
-               << " to " << frameSize[1] << ". Adjusting buffer size.");
-      m_ExtraFrameSize[1] = frameSize[1];
+      LOG_INFO("SamplesPerLine has changed from " << m_ExtraFrameSize[0] << "x" << m_ExtraFrameSize[1]
+          << " to " << frameSize[0] << "x" << frameSize[1] << ". Adjusting buffer size.");
+      m_ExtraFrameSize = frameSize;
       AdjustBufferSizes();
       AdjustSpacing(false);
     }
@@ -430,7 +430,6 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
         this->ReconstructFrame(data, m_ExtraBuffer, frameSize);
         for(unsigned i = 0; i < m_ExtraSources.size(); i++)
         {
-          frameSize[0] = m_ExtraFrameSize[1];
           if(m_ExtraSources[i]->AddItem(&m_ExtraBuffer[0],
                                         US_IMG_ORIENT_MF,
                                         frameSize, VTK_UNSIGNED_CHAR,
@@ -446,7 +445,6 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       }
       else if(usMode & PWD_PostProcess)
       {
-        frameSize[0] = m_ExtraFrameSize[1];
         assert(length == frameSize[1] * sizeof(uint8_t));
         assert(frameSize[0] * frameSize[1] == m_ExtraBuffer.size());
 
@@ -588,14 +586,14 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
     }
     else if(m_Mode == Mode::M || m_Mode == Mode::PW)
     {
-      frameSize[0] = m_ExtraFrameSize[1];
+      frameSize = m_ExtraFrameSize;
       m_ExtraSources[i]->SetPixelType(VTK_UNSIGNED_CHAR);
       m_ExtraSources[i]->SetImageType(US_IMG_BRIGHTNESS);
       m_ExtraSources[i]->SetOutputImageOrientation(US_IMG_ORIENT_MF);
       m_ExtraSources[i]->SetInputImageOrientation(US_IMG_ORIENT_MF);
-      if(m_ExtraBuffer.size() != m_ExtraFrameSize[1] * m_ExtraFrameSize[1])
+      if(m_ExtraBuffer.size() != m_ExtraFrameSize[0] * m_ExtraFrameSize[1])
       {
-        m_ExtraBuffer.resize(m_ExtraFrameSize[1] * m_ExtraFrameSize[1]);
+        m_ExtraBuffer.resize(m_ExtraFrameSize[0] * m_ExtraFrameSize[1]);
         std::fill(m_ExtraBuffer.begin(), m_ExtraBuffer.end(), 0);
       }
     }

@@ -97,7 +97,7 @@ PlusStatus vtkPlusWinProbeVideoSource::ReadConfiguration(vtkXMLDataElement* root
       int mwidthSeconds = std::stoi(mwidthSeconds_string);
       if(mwidthSeconds > 0)
       {
-        m_ExtraFrameSize[1] = this->MWidthFromSeconds(mwidthSeconds);
+        m_ExtraFrameSize[1] = this->MWidthFromSeconds(mwidthSeconds); // [0] or [1]?
       }
     }
   }

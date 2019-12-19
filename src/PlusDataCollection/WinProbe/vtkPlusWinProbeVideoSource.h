@@ -186,6 +186,11 @@ public:
   void SetBFrameRateLimit(int32_t value);
   int32_t GetBFrameRateLimit();
 
+  /*! If running in ARFI mode, does an ARFI push. Otherwise does nothing and returns failure status. */
+  void SetARFIEnabled(bool value);
+  bool GetARFIEnabled();
+  PlusStatus ARFIPush();
+
   int GetTransducerInternalID();
 
   enum class Mode
@@ -195,6 +200,7 @@ public:
     RF, // RF mode only
     M, // M mode
     PW, // Pulsed Wave Doppler
+    ARFI, // Acoustic Radiation Force Impulse
     CFD // Color-Flow Doppler
   };
 

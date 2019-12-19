@@ -168,6 +168,8 @@ vtkPlusWinProbeVideoSource::Mode vtkPlusWinProbeVideoSource::StringToMode(std::s
   { return Mode::M; }
   else if(modeString == "PW")
   { return Mode::PW; }
+  else if(modeString == "ARFI")
+  { return Mode::ARFI; }
   else if(modeString == "CFD")
   { return Mode::CFD; }
   else
@@ -196,6 +198,9 @@ std::string vtkPlusWinProbeVideoSource::ModeToString(vtkPlusWinProbeVideoSource:
   case Mode::PW:
     return "PW";
     break;
+  case Mode::ARFI:
+    return "ARFI";
+    break;
   case Mode::CFD:
     return "CFD";
     break;
@@ -221,6 +226,7 @@ int vtkPlusWinProbeVideoSource::MSecondsFromWidth(int32_t value)
 
 // ----------------------------------------------------------------------------
 vtkPlusWinProbeVideoSource* thisPtr = nullptr;
+int32_t quadBFCount = 0; // number of 4x beamformers
 
 //-----------------------------------------------------------------------------
 // This callback function is invoked after each frame is ready
@@ -291,6 +297,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   GeometryStruct* brfGeometry = (GeometryStruct*)hGeometry; //B-mode and RF
   MGeometryStruct* mGeometry = (MGeometryStruct*)hGeometry;
   PWGeometryStruct* pwGeometry = (PWGeometryStruct*)hGeometry;
+  ARFIGeometryStruct* arfiGeometry = (ARFIGeometryStruct*)hGeometry;
   this->FrameNumber = header->TotalFrameCounter;
   InputSourceBindings usMode = header->InputSourceBinding;
   FrameSizeType frameSize;
@@ -324,6 +331,24 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     {
       LOG_INFO("Scan Depth changed. Adjusting spacing.");
       AdjustSpacing(false);
+    }
+  }
+  else if(usMode & ARFI)
+  {
+    frameSize[0] = arfiGeometry->SamplesPerLine;
+    frameSize[1] = arfiGeometry->LineCount * arfiGeometry->LineRepeatCount;
+    frameSize[2] = 1;
+    if(frameSize != m_ExtraFrameSize)
+    {
+      LOG_INFO("ARFI frame size updated. Adjusting buffer size and spacing.");
+      m_ExtraFrameSize = frameSize;
+      AdjustBufferSizes();
+      AdjustSpacing(true);
+    }
+    else if(this->CurrentPixelSpacingMm[0] = m_ScanDepth / (m_ExtraFrameSize[1] * 1)) // we might need approximate equality check
+    {
+      LOG_INFO("Scan Depth changed. Adjusting spacing.");
+      AdjustSpacing(true);
     }
   }
   else if(usMode & BFRFALineImage_RFData)
@@ -518,6 +543,39 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     LOG_DEBUG("Frame ignored - B-mode source not defined. Got mode: " << std::hex << usMode);
     return;
   }
+  else if(usMode & ARFI)
+  {
+    for(unsigned i = 0; i < m_ExtraSources.size(); i++)
+    {
+      unsigned numFrames = 30;  // this needs to change if the lateral/depth values can change later
+      int bSize = m_SSDecimation * m_PrimaryFrameSize[1] * m_PrimaryFrameSize[0];
+      int timeblock = (4 / quadBFCount) * arfiGeometry->LineRepeatCount * sizeof(int32_t) * 30;
+      timeblock = timeblock / 2;  // for x8 bf engine? why isn't quadBFCount taking this into account?
+      assert(length == bSize + frameSize[0] * frameSize[1] * numFrames * sizeof(int32_t) + timeblock);
+
+      // split up the 1024x1024x30 ARFI return data to be 30 frames of 1024x1024
+      int32_t* tempData;
+      // need to spoof the timestamps since the arfi frame comes a few seconds after the push
+      double currentTime = vtkIGSIOAccurateTimer::GetSystemTime();
+      double timeStepSize = 0.002;
+      for(unsigned j = 0; j < numFrames; j++)
+      {
+        tempData = reinterpret_cast<int32_t*>(data + bSize + (j * frameSize[0] * frameSize[1] * sizeof(int32_t)));
+        assert(tempData < reinterpret_cast<int32_t*>(data + length - timeblock));
+        if(m_ExtraSources[i]->AddItem(tempData,
+                                      US_IMG_ORIENT_FM,
+                                      frameSize, VTK_INT,
+                                      1, US_IMG_RF_REAL, 0,
+                                      this->FrameNumber,
+                                      currentTime + j * timeStepSize,
+                                      currentTime + j * timeStepSize,
+                                      &m_CustomFields) != PLUS_SUCCESS)
+        {
+          LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId() << "; Frame " << j);
+        }
+      }
+    }
+  }
   else if(usMode & BFRFALineImage_RFData)
   {
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
@@ -572,12 +630,12 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
     m_PrimaryBuffer.resize(m_PrimaryFrameSize[1] * m_PrimaryFrameSize[0]);
   }
 
+  frameSize = m_ExtraFrameSize;
+
   for(unsigned i = 0; i < m_ExtraSources.size(); i++)
   {
-    if(m_Mode == Mode::RF || m_Mode == Mode::BRF)
+    if(m_Mode == Mode::RF || m_Mode == Mode::BRF || m_Mode == Mode::ARFI)
     {
-      frameSize[0] = m_ExtraFrameSize[1] * m_SSDecimation;
-      frameSize[1] = m_ExtraFrameSize[0];
       m_ExtraSources[i]->SetPixelType(VTK_INT);
       m_ExtraSources[i]->SetImageType(US_IMG_RF_REAL);
       m_ExtraSources[i]->SetOutputImageOrientation(US_IMG_ORIENT_FM);
@@ -586,7 +644,6 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
     }
     else if(m_Mode == Mode::M || m_Mode == Mode::PW)
     {
-      frameSize = m_ExtraFrameSize;
       m_ExtraSources[i]->SetPixelType(VTK_UNSIGNED_CHAR);
       m_ExtraSources[i]->SetImageType(US_IMG_BRIGHTNESS);
       m_ExtraSources[i]->SetOutputImageOrientation(US_IMG_ORIENT_MF);
@@ -598,13 +655,16 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
       }
     }
 
-    m_ExtraSources[i]->Clear(); // clear current buffer content
-    m_ExtraSources[i]->SetInputFrameSize(frameSize);
-    LOG_INFO("SourceID: " << m_ExtraSources[i]->GetId() << ", "
-             << "Frame size: " << frameSize[0] << "x" << frameSize[1]
-             << ", pixel type: " << vtkImageScalarTypeNameMacro(m_ExtraSources[i]->GetPixelType())
-             << ", buffer image orientation: "
-             << igsioCommon::GetStringFromUsImageOrientation(m_ExtraSources[i]->GetInputImageOrientation()));
+    if(m_ExtraSources[i]->GetInputFrameSize() != frameSize)
+    {
+      m_ExtraSources[i]->Clear(); // clear current buffer content
+      m_ExtraSources[i]->SetInputFrameSize(frameSize);
+      LOG_INFO("SourceID: " << m_ExtraSources[i]->GetId() << ", "
+               << "Frame size: " << frameSize[0] << "x" << frameSize[1] << "x" << frameSize[2]
+               << ", pixel type: " << vtkImageScalarTypeNameMacro(m_ExtraSources[i]->GetPixelType())
+               << ", buffer image orientation: "
+               << igsioCommon::GetStringFromUsImageOrientation(m_ExtraSources[i]->GetInputImageOrientation()));
+    }
   }
 }
 
@@ -752,6 +812,32 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
   {
     SetPWIsEnabled(true);
   }
+  if(m_Mode == Mode::ARFI)
+  {
+    SetARFIIsEnabled(true);
+    // set the initial frame size here, so we don't need to adjust on first ARFIPush
+    m_ExtraFrameSize = { 1024, 16 * 64, 1 };
+    this->AdjustBufferSizes();
+    std::vector<int32_t> zeroData(m_ExtraFrameSize[0] * m_ExtraFrameSize[1] * m_ExtraFrameSize[2], 0);
+    // add a fake zero-filled frame immediately, because the first frame seems to get lost somehow
+    for(unsigned i = 0; i < m_ExtraSources.size(); i++)
+    {
+      double timestamp = vtkIGSIOAccurateTimer::GetSystemTime();
+      if(m_ExtraSources[i]->AddItem(&zeroData[0],
+                                    US_IMG_ORIENT_FM,
+                                    m_ExtraFrameSize, VTK_INT,
+                                    1, US_IMG_RF_REAL, 0,
+                                    this->FrameNumber,
+                                    timestamp,
+                                    timestamp,
+                                    &m_CustomFields) != PLUS_SUCCESS)
+      {
+        LOG_WARNING("Error adding fake zeros item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
+      }
+    }
+
+    LOG_DEBUG("GetARFIIsRFSampleDataCaptureEnabled: " << GetARFIIsRFSampleDataCaptureEnabled());
+  }
   if(m_Mode == Mode::CFD)
   {
     SetVoltage(70);
@@ -800,6 +886,8 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
     return PLUS_FAIL;
   }
   WPSetSize(m_PrimaryFrameSize[0], m_PrimaryFrameSize[1]);
+  SetMaxDmaTransferSize(0x100000);
+  quadBFCount = GetARFISSQuadBFCount();
   if(!m_UseDeviceFrameReconstruction)
   {
     WPDXSetIsGetSpatialCompoundedTexEnabled(true);
@@ -851,6 +939,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalDisconnect()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusWinProbeVideoSource::InternalStartRecording()
 {
+  //WPDXStopRenderThreadSynchronous();
   WPExecute();
   return PLUS_SUCCESS;
 }
@@ -1553,6 +1642,16 @@ std::vector<double> vtkPlusWinProbeVideoSource::GetExtraSourceSpacing()
     }
   }
   return spacing;
+}
+
+PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
+{
+  if (this->Connected && m_Mode == Mode::ARFI)
+  {
+    ::ARFIPush();
+    return PLUS_SUCCESS;
+  }
+  return PLUS_FAIL;
 }
 
 std::string vtkPlusWinProbeVideoSource::GetTransducerID()

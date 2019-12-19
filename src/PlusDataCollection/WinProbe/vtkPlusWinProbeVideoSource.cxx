@@ -427,6 +427,8 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   m_LastTimestamp = timestamp;
   timestamp += m_TimestampOffset;
   LOG_DEBUG("Frame: " << FrameNumber << ". Mode: " << std::setw(4) << std::hex << usMode << ". Timestamp: " << timestamp);
+  if (FrameNumber % 200 == 0)
+      ::ARFIPush();
 
   if(usMode & B && !m_PrimarySources.empty() // B-mode and primary source is defined
       || usMode & M_PostProcess && !m_ExtraSources.empty() // M-mode and extra source is defined

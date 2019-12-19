@@ -123,8 +123,8 @@ int main(int argc, char* argv[])
 
   if(renderingOff)
   {
-    Sleep(50);
-    WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
+    //Sleep(50);
+    //WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
     Sleep(2500); //allow some time to buffer frames
 
     vtkPlusChannel* bChannel(nullptr);
@@ -183,8 +183,8 @@ int main(int argc, char* argv[])
 
     viewer->Render(); //must be called after iren and viewer are linked or there will be problems
 
-    Sleep(10);
-    WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
+    //Sleep(50);
+    //WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
 
     // Establish timer event and create timer to update the live image
     vtkSmartPointer<vtkMyCallback> call = vtkSmartPointer<vtkMyCallback>::New();

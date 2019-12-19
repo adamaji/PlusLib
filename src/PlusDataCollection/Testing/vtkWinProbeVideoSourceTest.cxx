@@ -183,6 +183,9 @@ int main(int argc, char* argv[])
 
     viewer->Render(); //must be called after iren and viewer are linked or there will be problems
 
+    Sleep(10);
+    WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
+
     // Establish timer event and create timer to update the live image
     vtkSmartPointer<vtkMyCallback> call = vtkSmartPointer<vtkMyCallback>::New();
     call->m_Interactor = iren;

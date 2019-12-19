@@ -332,10 +332,11 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       AdjustSpacing(false);
     }
   }
-  else if(usMode & ARFI_PostProcess)
+  else if(usMode & ARFI)
   {
     frameSize[0] = arfiGeometry->SamplesPerLine;
     frameSize[1] = arfiGeometry->LineCount;
+    frameSize[2] = arfiGeometry->LineRepeatCount * 30;
     if(frameSize != m_ExtraFrameSize)
     {
       LOG_INFO("ARFI frame size updated. Adjusting buffer size and spacing.");
@@ -544,13 +545,14 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     LOG_DEBUG("Frame ignored - B-mode source not defined. Got mode: " << std::hex << usMode);
     return;
   }
-  else if(usMode & ARFI_PostProcess)
+  else if(usMode & ARFI)
   {
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
     {
+      int32_t* iData = reinterpret_cast<int32_t*>(data);
       assert(length == frameSize[0] * frameSize[1] * sizeof(int32_t));
 
-      if(m_ExtraSources[i]->AddItem(data,
+      if(m_ExtraSources[i]->AddItem(iData,
                                     US_IMG_ORIENT_FM,
                                     frameSize, VTK_INT,
                                     1, US_IMG_RF_REAL, 0,
@@ -617,12 +619,12 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
     m_PrimaryBuffer.resize(m_PrimaryFrameSize[1] * m_PrimaryFrameSize[0]);
   }
 
+  frameSize = m_ExtraFrameSize;
+
   for(unsigned i = 0; i < m_ExtraSources.size(); i++)
   {
-    if(m_Mode == Mode::RF || m_Mode == Mode::BRF || m_Mode==Mode::ARFI)
+    if(m_Mode == Mode::RF || m_Mode == Mode::BRF || m_Mode == Mode::ARFI)
     {
-      frameSize[0] = m_ExtraFrameSize[1] * m_SSDecimation;
-      frameSize[1] = m_ExtraFrameSize[0];
       m_ExtraSources[i]->SetPixelType(VTK_INT);
       m_ExtraSources[i]->SetImageType(US_IMG_RF_REAL);
       m_ExtraSources[i]->SetOutputImageOrientation(US_IMG_ORIENT_FM);
@@ -631,7 +633,6 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
     }
     else if(m_Mode == Mode::M || m_Mode == Mode::PW)
     {
-      frameSize = m_ExtraFrameSize;
       m_ExtraSources[i]->SetPixelType(VTK_UNSIGNED_CHAR);
       m_ExtraSources[i]->SetImageType(US_IMG_BRIGHTNESS);
       m_ExtraSources[i]->SetOutputImageOrientation(US_IMG_ORIENT_MF);
@@ -646,7 +647,7 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
     m_ExtraSources[i]->Clear(); // clear current buffer content
     m_ExtraSources[i]->SetInputFrameSize(frameSize);
     LOG_INFO("SourceID: " << m_ExtraSources[i]->GetId() << ", "
-             << "Frame size: " << frameSize[0] << "x" << frameSize[1]
+             << "Frame size: " << frameSize[0] << "x" << frameSize[1] << "x" << frameSize[2]
              << ", pixel type: " << vtkImageScalarTypeNameMacro(m_ExtraSources[i]->GetPixelType())
              << ", buffer image orientation: "
              << igsioCommon::GetStringFromUsImageOrientation(m_ExtraSources[i]->GetInputImageOrientation()));

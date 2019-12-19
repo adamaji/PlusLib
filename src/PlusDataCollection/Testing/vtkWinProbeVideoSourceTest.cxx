@@ -123,6 +123,8 @@ int main(int argc, char* argv[])
 
   if(renderingOff)
   {
+    Sleep(50);
+    WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
     Sleep(2500); //allow some time to buffer frames
 
     vtkPlusChannel* bChannel(nullptr);

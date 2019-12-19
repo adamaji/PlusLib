@@ -168,6 +168,8 @@ vtkPlusWinProbeVideoSource::Mode vtkPlusWinProbeVideoSource::StringToMode(std::s
   { return Mode::M; }
   else if(modeString == "PW")
   { return Mode::PW; }
+  else if(modeString == "ARFI")
+  { return Mode::ARFI; }
   else if(modeString == "CFD")
   { return Mode::CFD; }
   else
@@ -195,6 +197,9 @@ std::string vtkPlusWinProbeVideoSource::ModeToString(vtkPlusWinProbeVideoSource:
     break;
   case Mode::PW:
     return "PW";
+    break;
+  case Mode::ARFI:
+    return "ARFI";
     break;
   case Mode::CFD:
     return "CFD";
@@ -291,6 +296,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   GeometryStruct* brfGeometry = (GeometryStruct*)hGeometry; //B-mode and RF
   MGeometryStruct* mGeometry = (MGeometryStruct*)hGeometry;
   PWGeometryStruct* pwGeometry = (PWGeometryStruct*)hGeometry;
+  ARFIGeometryStruct* arfiGeometry = (ARFIGeometryStruct*)hGeometry;
   this->FrameNumber = header->TotalFrameCounter;
   InputSourceBindings usMode = header->InputSourceBinding;
   FrameSizeType frameSize;
@@ -324,6 +330,26 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     {
       LOG_INFO("Scan Depth changed. Adjusting spacing.");
       AdjustSpacing(false);
+    }
+  }
+  else if(usMode & ARFI_PostProcess)
+  {
+    frameSize[0] = arfiGeometry->SamplesPerLine;
+    frameSize[1] = arfiGeometry->LineCount;
+    if(frameSize != m_ExtraFrameSize)
+    {
+      LOG_INFO("ARFI frame size updated. Adjusting buffer size and spacing.");
+      m_ExtraFrameSize = frameSize;
+      //m_ExtraFrameSize[1] = brfGeometry->SamplesPerLine;
+      //m_ExtraFrameSize[0] = brfGeometry->LineCount;
+      //m_SSDecimation = brfGeometry->Decimation;
+      AdjustBufferSizes();
+      AdjustSpacing(true);
+    }
+    else if(this->CurrentPixelSpacingMm[0] = m_ScanDepth / (m_ExtraFrameSize[1] * 1)) // we might need approximate equality check
+    {
+      LOG_INFO("Scan Depth changed. Adjusting spacing.");
+      AdjustSpacing(true);
     }
   }
   else if(usMode & BFRFALineImage_RFData)
@@ -518,6 +544,25 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     LOG_DEBUG("Frame ignored - B-mode source not defined. Got mode: " << std::hex << usMode);
     return;
   }
+  else if(usMode & ARFI_PostProcess)
+  {
+    for(unsigned i = 0; i < m_ExtraSources.size(); i++)
+    {
+      assert(length == frameSize[0] * frameSize[1] * sizeof(int32_t));
+
+      if(m_ExtraSources[i]->AddItem(data,
+                                    US_IMG_ORIENT_FM,
+                                    frameSize, VTK_INT,
+                                    1, US_IMG_RF_REAL, 0,
+                                    this->FrameNumber,
+                                    timestamp,
+                                    timestamp,
+                                    &m_CustomFields) != PLUS_SUCCESS)
+      {
+        LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
+      }
+    }
+  }
   else if(usMode & BFRFALineImage_RFData)
   {
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
@@ -574,7 +619,7 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
 
   for(unsigned i = 0; i < m_ExtraSources.size(); i++)
   {
-    if(m_Mode == Mode::RF || m_Mode == Mode::BRF)
+    if(m_Mode == Mode::RF || m_Mode == Mode::BRF || m_Mode==Mode::ARFI)
     {
       frameSize[0] = m_ExtraFrameSize[1] * m_SSDecimation;
       frameSize[1] = m_ExtraFrameSize[0];
@@ -751,6 +796,11 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
   if(m_Mode == Mode::PW)
   {
     SetPWIsEnabled(true);
+  }
+  if(m_Mode == Mode::ARFI)
+  {
+    SetARFIIsEnabled(true);
+    LOG_DEBUG("GetARFIIsRFSampleDataCaptureEnabled: " << GetARFIIsRFSampleDataCaptureEnabled());
   }
   if(m_Mode == Mode::CFD)
   {
@@ -1553,6 +1603,13 @@ std::vector<double> vtkPlusWinProbeVideoSource::GetExtraSourceSpacing()
     }
   }
   return spacing;
+}
+
+PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
+{
+  //TODO: check we are running and in ARFI
+  ::ARFIPush();
+  return PLUS_SUCCESS;
 }
 
 std::string vtkPlusWinProbeVideoSource::GetTransducerID()

@@ -1613,9 +1613,12 @@ std::vector<double> vtkPlusWinProbeVideoSource::GetExtraSourceSpacing()
 
 PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
 {
-  //TODO: check we are running and in ARFI
-  ::ARFIPush();
-  return PLUS_SUCCESS;
+  if (this->Connected && m_Mode == Mode::ARFI)
+  {
+    ::ARFIPush();
+    return PLUS_SUCCESS;
+  }
+  return PLUS_FAIL;
 }
 
 std::string vtkPlusWinProbeVideoSource::GetTransducerID()

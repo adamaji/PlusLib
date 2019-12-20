@@ -336,15 +336,12 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   else if(usMode & ARFI)
   {
     frameSize[0] = arfiGeometry->SamplesPerLine;
-    frameSize[1] = arfiGeometry->LineCount;
-    frameSize[2] = arfiGeometry->LineRepeatCount * 30;
+    frameSize[1] = arfiGeometry->LineCount* arfiGeometry->LineRepeatCount;
+    frameSize[2] = 30;
     if(frameSize != m_ExtraFrameSize)
     {
       LOG_INFO("ARFI frame size updated. Adjusting buffer size and spacing.");
       m_ExtraFrameSize = frameSize;
-      //m_ExtraFrameSize[1] = brfGeometry->SamplesPerLine;
-      //m_ExtraFrameSize[0] = brfGeometry->LineCount;
-      //m_SSDecimation = brfGeometry->Decimation;
       AdjustBufferSizes();
       AdjustSpacing(true);
     }
@@ -552,9 +549,10 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   {
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
     {
-      int32_t* iData = reinterpret_cast<int32_t*>(data);
-      int timeblock = (16 / quadBFCount) * arfiGeometry->LineRepeatCount * sizeof(int32_t) * 30;
-      assert(length == frameSize[0] * frameSize[1] * sizeof(int32_t) + timeblock);
+      int bSize = m_SSDecimation * m_PrimaryFrameSize[1] * m_PrimaryFrameSize[0];
+      int timeblock = (4 / quadBFCount) * arfiGeometry->LineRepeatCount * sizeof(int32_t) * 30;
+      assert(length == bSize + frameSize[0] * frameSize[1] * frameSize[2] * sizeof(int32_t) + timeblock);
+      int32_t* iData = reinterpret_cast<int32_t*>(data + bSize);
 
       if(m_ExtraSources[i]->AddItem(iData,
                                     US_IMG_ORIENT_FM,
@@ -713,7 +711,6 @@ vtkPlusWinProbeVideoSource::vtkPlusWinProbeVideoSource()
   thisPtr = this;
   WPSetCallback(funcPtr);
   WPInitialize();
-  quadBFCount = GetARFISSQuadBFCount();
 }
 
 // ----------------------------------------------------------------------------
@@ -857,6 +854,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
   }
   WPSetSize(m_PrimaryFrameSize[0], m_PrimaryFrameSize[1]);
   SetMaxDmaTransferSize(0x1000000);
+  quadBFCount = GetARFISSQuadBFCount();
   if(!m_UseDeviceFrameReconstruction)
   {
     WPDXSetIsGetSpatialCompoundedTexEnabled(true);

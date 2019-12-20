@@ -226,6 +226,7 @@ int vtkPlusWinProbeVideoSource::MSecondsFromWidth(int32_t value)
 
 // ----------------------------------------------------------------------------
 vtkPlusWinProbeVideoSource* thisPtr = nullptr;
+int32_t quadBFCount = 0; // number of 4x beamformers
 
 //-----------------------------------------------------------------------------
 // This callback function is invoked after each frame is ready
@@ -552,7 +553,8 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
     {
       int32_t* iData = reinterpret_cast<int32_t*>(data);
-      assert(length == frameSize[0] * frameSize[1] * sizeof(int32_t));
+      int timeblock = (16 / quadBFCount) * arfiGeometry->LineRepeatCount * sizeof(int32_t) * 30;
+      assert(length == frameSize[0] * frameSize[1] * sizeof(int32_t) + timeblock);
 
       if(m_ExtraSources[i]->AddItem(iData,
                                     US_IMG_ORIENT_FM,
@@ -711,6 +713,7 @@ vtkPlusWinProbeVideoSource::vtkPlusWinProbeVideoSource()
   thisPtr = this;
   WPSetCallback(funcPtr);
   WPInitialize();
+  quadBFCount = GetARFISSQuadBFCount();
 }
 
 // ----------------------------------------------------------------------------

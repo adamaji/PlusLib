@@ -853,6 +853,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
     return PLUS_FAIL;
   }
   WPSetSize(m_PrimaryFrameSize[0], m_PrimaryFrameSize[1]);
+  SetMaxDmaTransferSize(0x1000000);
   if(!m_UseDeviceFrameReconstruction)
   {
     WPDXSetIsGetSpatialCompoundedTexEnabled(true);
@@ -904,6 +905,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalDisconnect()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusWinProbeVideoSource::InternalStartRecording()
 {
+  //WPDXStopRenderThreadSynchronous();
   WPExecute();
   return PLUS_SUCCESS;
 }

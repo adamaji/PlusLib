@@ -851,7 +851,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
     return PLUS_FAIL;
   }
   WPSetSize(m_PrimaryFrameSize[0], m_PrimaryFrameSize[1]);
-  SetMaxDmaTransferSize(0x1000000);
+  SetMaxDmaTransferSize(0x100000);
   quadBFCount = GetARFISSQuadBFCount();
   if(!m_UseDeviceFrameReconstruction)
   {

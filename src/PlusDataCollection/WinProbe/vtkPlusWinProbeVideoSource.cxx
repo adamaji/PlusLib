@@ -573,6 +573,10 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
         {
           LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId() << "; Frame " << j);
         }
+        else
+        {
+          LOG_INFO("Successfully added item to ARFI video source " << m_ExtraSources[i]->GetSourceId() << "; Frame " << j);
+        }
       }
     }
   }
@@ -732,8 +736,8 @@ vtkPlusWinProbeVideoSource::~vtkPlusWinProbeVideoSource()
   {
     this->Disconnect();
   }
-  WPDispose();
   WPDXDispose();
+  WPDispose();
 }
 
 // ----------------------------------------------------------------------------
@@ -1644,11 +1648,44 @@ std::vector<double> vtkPlusWinProbeVideoSource::GetExtraSourceSpacing()
   return spacing;
 }
 
+void vtkPlusWinProbeVideoSource::SetARFIEnabled(bool value)
+{
+  if(Connected)
+  {
+    SetARFIIsEnabled(value);
+    SetARFIIsRFSampleDataCaptureEnabled(value);
+    LOG_INFO("ARFI enabled");
+  }
+  if(value)
+  {
+    m_Mode = Mode::ARFI;
+  }
+  else
+  {
+    m_Mode = Mode::B;
+  }
+}
+
+bool vtkPlusWinProbeVideoSource::GetARFIEnabled()
+{
+  bool arfiEnabled = (m_Mode == Mode::ARFI);
+  if(Connected)
+  {
+    arfiEnabled = GetARFIIsEnabled();
+    if(arfiEnabled)
+    {
+      m_Mode = Mode::ARFI;
+    }
+  }
+  return arfiEnabled;
+}
+
 PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
 {
   if (this->Connected && m_Mode == Mode::ARFI)
   {
     ::ARFIPush();
+    Sleep(8000);  // allow some time to buffer frames
     return PLUS_SUCCESS;
   }
   return PLUS_FAIL;

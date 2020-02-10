@@ -660,13 +660,16 @@ void vtkPlusWinProbeVideoSource::AdjustBufferSizes()
       }
     }
 
-    m_ExtraSources[i]->Clear(); // clear current buffer content
-    m_ExtraSources[i]->SetInputFrameSize(frameSize);
-    LOG_INFO("SourceID: " << m_ExtraSources[i]->GetId() << ", "
-             << "Frame size: " << frameSize[0] << "x" << frameSize[1] << "x" << frameSize[2]
-             << ", pixel type: " << vtkImageScalarTypeNameMacro(m_ExtraSources[i]->GetPixelType())
-             << ", buffer image orientation: "
-             << igsioCommon::GetStringFromUsImageOrientation(m_ExtraSources[i]->GetInputImageOrientation()));
+    if(m_ExtraSources[i]->GetInputFrameSize() != frameSize)
+    {
+      m_ExtraSources[i]->Clear(); // clear current buffer content
+      m_ExtraSources[i]->SetInputFrameSize(frameSize);
+      LOG_INFO("SourceID: " << m_ExtraSources[i]->GetId() << ", "
+               << "Frame size: " << frameSize[0] << "x" << frameSize[1] << "x" << frameSize[2]
+               << ", pixel type: " << vtkImageScalarTypeNameMacro(m_ExtraSources[i]->GetPixelType())
+               << ", buffer image orientation: "
+               << igsioCommon::GetStringFromUsImageOrientation(m_ExtraSources[i]->GetInputImageOrientation()));
+    }
   }
 }
 
@@ -817,6 +820,27 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
   if(m_Mode == Mode::ARFI)
   {
     SetARFIIsEnabled(true);
+    // set the initial frame size here, so we don't need to adjust on first ARFIPush
+    m_ExtraFrameSize = { 1024, 16 * 64, 30 };
+    this->AdjustBufferSizes();
+    std::vector<int32_t> zeroData(m_ExtraFrameSize[0] * m_ExtraFrameSize[1] * m_ExtraFrameSize[2], 0);
+    // add a fake zero-filled frame immediately, because the first frame seems to get lost somehow
+    for(unsigned i = 0; i < m_ExtraSources.size(); i++)
+    {
+      double timestamp = vtkIGSIOAccurateTimer::GetSystemTime();
+      if(m_ExtraSources[i]->AddItem(&zeroData[0],
+                                    US_IMG_ORIENT_FM,
+                                    m_ExtraFrameSize, VTK_INT,
+                                    1, US_IMG_RF_REAL, 0,
+                                    this->FrameNumber,
+                                    timestamp,
+                                    timestamp,
+                                    &m_CustomFields) != PLUS_SUCCESS)
+      {
+        LOG_WARNING("Error adding fake zeros item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
+      }
+    }
+
     LOG_DEBUG("GetARFIIsRFSampleDataCaptureEnabled: " << GetARFIIsRFSampleDataCaptureEnabled());
   }
   if(m_Mode == Mode::CFD)

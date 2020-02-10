@@ -25,7 +25,10 @@
 class vtkMyCallback : public vtkCommand
 {
 public:
-  static vtkMyCallback* New() { return new vtkMyCallback; }
+  static vtkMyCallback* New()
+  {
+    return new vtkMyCallback;
+  }
 
   virtual void Execute(vtkObject* caller, unsigned long, void*)
   {

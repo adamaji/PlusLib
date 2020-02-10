@@ -31,7 +31,10 @@ public:
   virtual void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /*! Specify the device connected to this class */
-  virtual bool IsTracker() const { return false; }
+  virtual bool IsTracker() const
+  {
+    return false;
+  }
 
   /*! Read configuration from xml data */
   virtual PlusStatus ReadConfiguration(vtkXMLDataElement* config);
@@ -94,10 +97,16 @@ public:
   PlusStatus SetBMultiFocalZoneCount(int32_t count);
 
   /* Whether or not to use device's built-in frame reconstruction */
-  void SetUseDeviceFrameReconstruction(bool value) { m_UseDeviceFrameReconstruction = value; }
+  void SetUseDeviceFrameReconstruction(bool value)
+  {
+    m_UseDeviceFrameReconstruction = value;
+  }
 
   /* Whether or not to use device's built-in frame reconstruction */
-  bool GetUseDeviceFrameReconstruction() { return m_UseDeviceFrameReconstruction; }
+  bool GetUseDeviceFrameReconstruction()
+  {
+    return m_UseDeviceFrameReconstruction;
+  }
 
   /*! Set ON/OFF of collecting US data. */
   PlusStatus FreezeDevice(bool freeze);
@@ -112,28 +121,52 @@ public:
   std::string GetTransducerID();
 
   /*! Sets the noise floor for intensity range compression. */
-  void SetMinValue(const uint16_t minValue) { m_MinValue = minValue; }
+  void SetMinValue(const uint16_t minValue)
+  {
+    m_MinValue = minValue;
+  }
 
   /*! Gets the noise floor for intensity range compression. */
-  uint16_t GetMinValue() const { return m_MinValue; }
+  uint16_t GetMinValue() const
+  {
+    return m_MinValue;
+  }
 
   /*! Sets the typical high value for intensity range compression. */
-  void SetMaxValue(const uint16_t maxValue) { m_MaxValue = maxValue; }
+  void SetMaxValue(const uint16_t maxValue)
+  {
+    m_MaxValue = maxValue;
+  }
 
   /*! Gets the typical high value for intensity range compression. */
-  uint16_t GetMaxValue() const { return m_MaxValue; }
+  uint16_t GetMaxValue() const
+  {
+    return m_MaxValue;
+  }
 
   /*! Sets the threshold value for switching from log to linear mapping for intensity range compression. */
-  void SetLogLinearKnee(const uint16_t threshold) { m_Knee = threshold; }
+  void SetLogLinearKnee(const uint16_t threshold)
+  {
+    m_Knee = threshold;
+  }
 
   /*! Gets the threshold value for switching from log to linear mapping for intensity range compression. */
-  uint16_t GetLogLinearKnee() const { return m_Knee; }
+  uint16_t GetLogLinearKnee() const
+  {
+    return m_Knee;
+  }
 
   /*! Sets the maximum output value for log mapping of intensity range. */
-  void SetLogMax(const uint8_t threshold) { m_OutputKnee = threshold; }
+  void SetLogMax(const uint8_t threshold)
+  {
+    m_OutputKnee = threshold;
+  }
 
   /*! Gets the maximum output value for log mapping of intensity range. */
-  uint8_t GetLogMax() const { return m_OutputKnee; }
+  uint8_t GetLogMax() const
+  {
+    return m_OutputKnee;
+  }
 
   void SetSpatialCompoundEnabled(bool value);
   bool GetSpatialCompoundEnabled();

@@ -159,21 +159,37 @@ vtkPlusWinProbeVideoSource::Mode vtkPlusWinProbeVideoSource::StringToMode(std::s
   std::transform(modeString.begin(), modeString.end(), modeString.begin(), ::toupper);
 
   if(modeString == "B")
-  { return Mode::B; }
+  {
+    return Mode::B;
+  }
   else if(modeString == "BRF")
-  { return Mode::BRF; }
+  {
+    return Mode::BRF;
+  }
   else if(modeString == "RF")
-  { return Mode::RF; }
+  {
+    return Mode::RF;
+  }
   else if(modeString == "M")
-  { return Mode::M; }
+  {
+    return Mode::M;
+  }
   else if(modeString == "PW")
-  { return Mode::PW; }
+  {
+    return Mode::PW;
+  }
   else if(modeString == "ARFI")
-  { return Mode::ARFI; }
+  {
+    return Mode::ARFI;
+  }
   else if(modeString == "CFD")
-  { return Mode::CFD; }
+  {
+    return Mode::CFD;
+  }
   else
-  { LOG_ERROR("Unrecognized mode: " << modeString); }
+  {
+    LOG_ERROR("Unrecognized mode: " << modeString);
+  }
 
   return Mode::B; // default mode
 }
@@ -183,31 +199,31 @@ std::string vtkPlusWinProbeVideoSource::ModeToString(vtkPlusWinProbeVideoSource:
 {
   switch(mode)
   {
-  case Mode::B:
-    return "B";
-    break;
-  case Mode::BRF:
-    return "BRF";
-    break;
-  case Mode::RF:
-    return "RF";
-    break;
-  case Mode::M:
-    return "M";
-    break;
-  case Mode::PW:
-    return "PW";
-    break;
-  case Mode::ARFI:
-    return "ARFI";
-    break;
-  case Mode::CFD:
-    return "CFD";
-    break;
-  default:
-    LOG_ERROR("Invalid mode passed: " << int(mode));
-    return "B";
-    break;
+    case Mode::B:
+      return "B";
+      break;
+    case Mode::BRF:
+      return "BRF";
+      break;
+    case Mode::RF:
+      return "RF";
+      break;
+    case Mode::M:
+      return "M";
+      break;
+    case Mode::PW:
+      return "PW";
+      break;
+    case Mode::ARFI:
+      return "ARFI";
+      break;
+    case Mode::CFD:
+      return "CFD";
+      break;
+    default:
+      LOG_ERROR("Invalid mode passed: " << int(mode));
+      return "B";
+      break;
   }
 }
 
@@ -336,7 +352,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   else if(usMode & ARFI)
   {
     frameSize[0] = arfiGeometry->SamplesPerLine;
-    frameSize[1] = arfiGeometry->LineCount* arfiGeometry->LineRepeatCount;
+    frameSize[1] = arfiGeometry->LineCount * arfiGeometry->LineRepeatCount;
     frameSize[2] = 30;
     if(frameSize != m_ExtraFrameSize)
     {
@@ -389,7 +405,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     if(frameSize != m_ExtraFrameSize)
     {
       LOG_INFO("SamplesPerLine has changed from " << m_ExtraFrameSize[0] << "x" << m_ExtraFrameSize[1]
-          << " to " << frameSize[0] << "x" << frameSize[1] << ". Adjusting buffer size.");
+               << " to " << frameSize[0] << "x" << frameSize[1] << ". Adjusting buffer size.");
       m_ExtraFrameSize = frameSize;
       AdjustBufferSizes();
       AdjustSpacing(false);
@@ -1611,7 +1627,7 @@ std::vector<double> vtkPlusWinProbeVideoSource::GetExtraSourceSpacing()
 
 PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
 {
-  if (this->Connected && m_Mode == Mode::ARFI)
+  if(this->Connected && m_Mode == Mode::ARFI)
   {
     ::ARFIPush();
     return PLUS_SUCCESS;

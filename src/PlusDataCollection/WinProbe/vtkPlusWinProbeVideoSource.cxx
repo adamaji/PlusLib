@@ -801,6 +801,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
   if(m_Mode == Mode::ARFI)
   {
     SetARFIIsEnabled(true);
+    SetARFIIsRFSampleDataCaptureEnabled(true);
     LOG_DEBUG("GetARFIIsRFSampleDataCaptureEnabled: " << GetARFIIsRFSampleDataCaptureEnabled());
   }
   if(m_Mode == Mode::CFD)

@@ -1346,14 +1346,14 @@ void vtkPlusWinProbeVideoSource::SetPWDopplerLine(uint16_t value)
     SetPWPWDopplerLine(value);
     SetPendingRecreateTables(true);
   }
-  m_PWDopplerLine = GetPWDopplerLine();
+  m_PWDopplerLine = GetPWPWDopplerLine();
 }
 
 uint16_t vtkPlusWinProbeVideoSource::GetPWDopplerLine()
 {
   if(Connected)
   {
-    m_PWDopplerLine = GetPWDopplerLine();
+    m_PWDopplerLine = GetPWPWDopplerLine();
   }
   return m_PWDopplerLine;
 }

@@ -1610,6 +1610,38 @@ std::vector<double> vtkPlusWinProbeVideoSource::GetExtraSourceSpacing()
   return spacing;
 }
 
+void vtkPlusWinProbeVideoSource::SetARFIEnabled(bool value)
+{
+  if(Connected)
+  {
+    SetARFIIsEnabled(value);
+    SetARFIIsRFSampleDataCaptureEnabled(value);
+    LOG_INFO("AFRI enabled");
+  }
+  if(value)
+  {
+    m_Mode = Mode::ARFI;
+  }
+  else
+  {
+    m_Mode = Mode::B;
+  }
+}
+
+bool vtkPlusWinProbeVideoSource::GetARFIEnabled()
+{
+  bool arfiEnabled = (m_Mode == Mode::ARFI);
+  if(Connected)
+  {
+    arfiEnabled = GetARFIIsEnabled();
+    if(arfiEnabled)
+    {
+      m_Mode = Mode::ARFI;
+    }
+  }
+  return arfiEnabled;
+}
+
 PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
 {
   if (this->Connected && m_Mode == Mode::ARFI)

@@ -186,6 +186,8 @@ public:
   void SetBFrameRateLimit(int32_t value);
   int32_t GetBFrameRateLimit();
 
+  void SetARFIEnabled(bool value);
+  bool GetARFIEnabled();
   /*! If running in ARFI mode, does an ARFI push. Otherwise does nothing and returns failure status. */
   PlusStatus ARFIPush();
 

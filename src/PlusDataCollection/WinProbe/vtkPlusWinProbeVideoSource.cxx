@@ -568,16 +568,21 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       assert(length == bSize + frameSize[0] * frameSize[1] * frameSize[2] * sizeof(int32_t) + timeblock);
       int32_t* iData = reinterpret_cast<int32_t*>(data + bSize);
 
-      if(m_ExtraSources[i]->AddItem(iData,
-                                    US_IMG_ORIENT_FM,
-                                    frameSize, VTK_INT,
-                                    1, US_IMG_RF_REAL, 0,
-                                    this->FrameNumber,
-                                    timestamp,
-                                    timestamp,
-                                    &m_CustomFields) != PLUS_SUCCESS)
+      // split up the 1024x1024x30 ARFI return data to be 30 frames of 1024x1024
+      FrameSizeType individualFrameSize = { frameSize[0], frameSize[1] };
+      for(int j = 0; j < frameSize[2]; j++)
       {
-        LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
+        if(m_ExtraSources[i]->AddItem(iData + (j * sizeof(int32_t) * frameSize[0] * frameSize[1]),
+                                      US_IMG_ORIENT_FM,
+                                      individualFrameSize, VTK_INT,
+                                      1, US_IMG_RF_REAL, 0,
+                                      this->FrameNumber + j,
+                                      timestamp,
+                                      timestamp,
+                                      &m_CustomFields) != PLUS_SUCCESS)
+        {
+          LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
+        }
       }
     }
   }

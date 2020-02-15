@@ -22,6 +22,9 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkPlusDataSource.h"
 
+#include <vtkPlusDataCollector.h>
+#include <vtkPlusVirtualCapture.h>
+
 class vtkMyCallback : public vtkCommand
 {
 public:
@@ -77,9 +80,17 @@ int main(int argc, char* argv[])
     exit(EXIT_SUCCESS);
   }
 
+  // ==========================
+  //LOG_WARNING("SLEEPING! ATTACH DEBUGGER TO THIS NOW!!!");
+  //Sleep(20000);
 
-  vtkSmartPointer< vtkPlusWinProbeVideoSource > WinProbeDevice = vtkSmartPointer< vtkPlusWinProbeVideoSource >::New();
-  WinProbeDevice->SetDeviceId("VideoDeviceLinearArray");
+  vtkPlusDevice* aDevice = nullptr;
+  vtkPlusVirtualCapture* pVirtualDiscCapture[2] = {nullptr, nullptr};
+  vtkSmartPointer<vtkPlusDataCollector> dataCollector = vtkSmartPointer<vtkPlusDataCollector>::New();
+
+  // vtkSmartPointer< vtkPlusWinProbeVideoSource > WinProbeDevice = vtkSmartPointer< vtkPlusWinProbeVideoSource >::New();
+  // WinProbeDevice->SetDeviceId("VideoDeviceLinearArray");
+  vtkPlusWinProbeVideoSource* WinProbeDevice = nullptr;
 
   vtkSmartPointer<vtkXMLDataElement> configRootElement = vtkSmartPointer<vtkXMLDataElement>::New();
   if(STRCASECMP(inputConfigFileName.c_str(), "") != 0)
@@ -92,17 +103,58 @@ int main(int argc, char* argv[])
       return EXIT_FAILURE;
     }
 
-    WinProbeDevice->ReadConfiguration(configRootElement);
+    //WinProbeDevice->ReadConfiguration(configRootElement);
+
+    dataCollector->ReadConfiguration(configRootElement);
   }
 
-  std::cout << "\n" << *WinProbeDevice; //invokes PrintSelf()
+  // std::cout << "\n" << *WinProbeDevice; //invokes PrintSelf()
 
+  /*
   if(WinProbeDevice->Connect() != PLUS_SUCCESS)
   {
     LOG_ERROR("Unable to connect to WinProbe Probe");
     exit(EXIT_FAILURE);
   }
+  */
+  if (dataCollector->Connect() != PLUS_SUCCESS)
+  {
+    LOG_ERROR("data collector cannot connect");
+    return EXIT_FAILURE;
+  }
 
+  if (dataCollector->GetDevice(aDevice, "VideoDeviceLinearArray") != PLUS_SUCCESS)
+  {
+      LOG_INFO("Unable to locate LinearArray device with Id=\"VideoDeviceLinearArray\".");
+      return EXIT_FAILURE;
+  }
+  else
+  {
+      WinProbeDevice = dynamic_cast<vtkPlusWinProbeVideoSource*>(aDevice);
+  }
+
+  if (dataCollector->GetDevice(aDevice, "CaptureDeviceLinearArray") != PLUS_SUCCESS)
+  {
+      LOG_ERROR("No VirtualCapture has been found by the name CaptureDeviceLinearArray");
+      return EXIT_FAILURE;
+  }
+  pVirtualDiscCapture[0] = vtkPlusVirtualCapture::SafeDownCast(aDevice);
+
+  if (dataCollector->GetDevice(aDevice, "CaptureDeviceLinearArray2") != PLUS_SUCCESS)
+  {
+      LOG_ERROR("No VirtualCapture has been found by the name CaptureDeviceLinearArray2");
+      return EXIT_FAILURE;
+  }
+  pVirtualDiscCapture[1] = vtkPlusVirtualCapture::SafeDownCast(aDevice);
+
+  if (dataCollector->Start() != PLUS_SUCCESS)
+  {
+      LOG_ERROR("Datacollector failed to start");
+      return EXIT_FAILURE;
+  }
+
+
+  /*
   //test starting and stopping (pausing recording)
   WinProbeDevice->StartRecording(); //applies the setting read from config file
   std::cout << "\n" << *WinProbeDevice; //invokes PrintSelf()
@@ -119,14 +171,25 @@ int main(int argc, char* argv[])
   WinProbeDevice->SetLogLinearKnee(123);
   uVal = WinProbeDevice->GetLogLinearKnee();
 
-  WinProbeDevice->StartRecording();
+  LOG_DEBUG("just making sure: enabled is: " << WinProbeDevice->GetARFIIsEnabled() << " ============================ ");
+  // WinProbeDevice->StartRecording();
+  */
+
+  LOG_DEBUG("Opening files for virtual capture and enabling capture\n");
+  std::string primaryFileName("C:\\Users\\AdamAji\\Documents\\testing\\wow_split_0.mha");
+  std::string extraFileName("C:\\Users\\AdamAji\\Documents\\testing\\wow_split_0_rf.mha");
+  // pVirtualDiscCapture[0]->OpenFile(primaryFileName.c_str());
+  pVirtualDiscCapture[1]->OpenFile(extraFileName.c_str());
+  // pVirtualDiscCapture[0]->SetEnableCapturing(true);
+  // pVirtualDiscCapture[1]->SetEnableCapturing(true);
 
   if(renderingOff)
   {
-    //Sleep(50);
-    //WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
-    Sleep(2500); //allow some time to buffer frames
+    Sleep(5000);
+    WinProbeDevice->ARFIPush(); // in case we are in ARFI mode, invoke it
+    Sleep(20000); //allow some time to buffer frames
 
+    /*
     vtkPlusChannel* bChannel(nullptr);
     if(WinProbeDevice->GetOutputChannelByName(bChannel, "VideoStream") != PLUS_SUCCESS)
     {
@@ -139,9 +202,26 @@ int main(int argc, char* argv[])
     {
       LOG_WARNING("Unable to locate the channel with Id=\"RFStream\". RF mode will not be used.");
     }
+    */
 
+    // pVirtualDiscCapture[1]->SetEnableCapturing(true);
     WinProbeDevice->FreezeDevice(true);
 
+    LOG_DEBUG("Closing virtual capture files\n");
+    // pVirtualDiscCapture[0]->SetEnableCapturing(false);
+    pVirtualDiscCapture[1]->SetEnableCapturing(false);
+    LOG_ERROR("ATTEMPTING TO MANUALLY TAKE VIRTUAL CAPTURE SNAPSHOT");
+    // pVirtualDiscCapture[1]->TakeSnapshot();
+    /*
+    for (int i=0; i<30; i++) {
+      LOG_ERROR("ATTEMPTING TO MANUALLY TAKE VIRTUAL CAPTURE SNAPSHOT");
+      pVirtualDiscCapture[1]->TakeSnapshot();
+    }
+    */
+    // pVirtualDiscCapture[0]->CloseFile();
+    // pVirtualDiscCapture[1]->CloseFile();
+
+    /*
     vtkPlusDataSource* bSource(nullptr);
     bChannel->GetVideoSource(bSource);
     bSource->WriteToSequenceFile(outputFileName.c_str());
@@ -152,9 +232,11 @@ int main(int argc, char* argv[])
       rfChannel->GetVideoSource(rfSource);
       rfSource->WriteToSequenceFile((outputFileName + "_RF.mha").c_str());
     }
+    */
 
     //update and write configuration
-    WinProbeDevice->WriteConfiguration(configRootElement);
+    //WinProbeDevice->WriteConfiguration(configRootElement);
+    dataCollector->WriteConfiguration(configRootElement);
     bool success = vtkXMLUtilities::WriteElementToFile(configRootElement, (outputFileName + ".xml").c_str());
     if(!success)
     {
@@ -198,8 +280,12 @@ int main(int argc, char* argv[])
     iren->Start();
   }
 
+  /*
   WinProbeDevice->StopRecording();
   WinProbeDevice->Disconnect();
+  */
+  dataCollector->Stop();
+  dataCollector->Disconnect();
 
   return EXIT_SUCCESS;
 }

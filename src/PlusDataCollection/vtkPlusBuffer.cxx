@@ -361,7 +361,7 @@ PlusStatus vtkPlusBuffer::AddItem(const igsioFieldMapType& fields,
   }
 
   // get the pointer to the correct location in the tracker buffer, where this data needs to be copied
-  StreamBufferItem* newObjectInBuffer = this->StreamBuffer->GetBufferItemPointerFromBufferIndex(bufferIndex);
+  StreamBufferItem *newObjectInBuffer = this->StreamBuffer->GetBufferItemPointerFromBufferIndex(bufferIndex);
   if (newObjectInBuffer == NULL)
   {
     LOCAL_LOG_ERROR("vtkPlusBuffer: Failed to get pointer to data buffer object from the tracker buffer for the new frame!");
@@ -384,20 +384,20 @@ PlusStatus vtkPlusBuffer::AddItem(const igsioFieldMapType& fields,
 }
 
 //----------------------------------------------------------------------------
-PlusStatus vtkPlusBuffer::AddItem(void* imageDataPtr,
+PlusStatus vtkPlusBuffer::AddItem(void *imageDataPtr,
                                   US_IMAGE_ORIENTATION usImageOrientation,
-                                  const FrameSizeType& inputFrameSizeInPx,
+                                  const FrameSizeType &inputFrameSizeInPx,
                                   igsioCommon::VTKScalarPixelType pixelType,
                                   unsigned int numberOfScalarComponents,
                                   US_IMAGE_TYPE imageType,
                                   int numberOfBytesToSkip,
                                   long frameNumber,
-                                  const std::array<int, 3>& clipRectangleOrigin,
-                                  const std::array<int, 3>& clipRectangleSize,
+                                  const std::array<int, 3> &clipRectangleOrigin,
+                                  const std::array<int, 3> &clipRectangleSize,
                                   double unfilteredTimestamp /*= UNDEFINED_TIMESTAMP*/,
                                   double filteredTimestamp /*= UNDEFINED_TIMESTAMP*/,
-                                  const igsioFieldMapType* customFields /*= NULL */,
-                                  vtkStreamingVolumeFrame* encodedFrame /*=NULL*/)
+                                  const igsioFieldMapType *customFields /*= NULL */,
+                                  vtkStreamingVolumeFrame *encodedFrame /*=NULL*/)
 {
   if (unfilteredTimestamp == UNDEFINED_TIMESTAMP)
   {
@@ -702,7 +702,10 @@ PlusStatus vtkPlusBuffer::AddTimeStampedItem(vtkMatrix4x4* matrix, ToolStatus st
 //----------------------------------------------------------------------------
 ItemStatus vtkPlusBuffer::GetLatestTimeStamp(double& latestTimestamp)
 {
-  return this->StreamBuffer->GetLatestTimeStamp(latestTimestamp);
+  LOG_TRACE("vtkPlusBuffer::GetLatestTimestamp");
+  ItemStatus status = this->StreamBuffer->GetLatestTimeStamp(latestTimestamp);
+  LOG_TRACE("status: " << status);
+  return status;
 }
 
 //----------------------------------------------------------------------------
@@ -772,6 +775,7 @@ ItemStatus vtkPlusBuffer::GetStreamBufferItem(BufferItemUidType uid, StreamBuffe
   igsioLockGuard<StreamItemCircularBuffer> dataBufferGuardedLock(this->StreamBuffer);
 
   StreamBufferItem* dataItem = NULL;
+  LOG_ERROR("before getbufferitempointerfromuid -- in gettimestamperporttable");
   ItemStatus itemStatus = this->StreamBuffer->GetBufferItemPointerFromUid(uid, dataItem);
   if (itemStatus != ITEM_OK)
   {

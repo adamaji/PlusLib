@@ -52,6 +52,7 @@ public:
   virtual PlusStatus Reset();
 
   virtual PlusStatus TakeSnapshot();
+  virtual PlusStatus TakeSequenceSnapshot(int aMaxNumberOfFrames);
 
   virtual int OutputChannelCount() const;
 
@@ -181,8 +182,10 @@ protected:
   vtkPlusLogger::LogLevelType GracePeriodLogLevel;
 
   PlusStatus GetInputTrackedFrame(igsioTrackedFrame& aFrame);
+  PlusStatus GetInputTrackedFrameList(double& lastAlreadyRecordedFrameTimestamp, vtkIGSIOTrackedFrameList* recordedFrames, int aMaxNumberOfFramesToAdd);
   PlusStatus GetInputTrackedFrameListSampled(double& lastAlreadyRecordedFrameTimestamp, double& nextFrameToBeRecordedTimestamp, vtkIGSIOTrackedFrameList* recordedFrames, double requestedFramePeriodSec, double maxProcessingTimeSec);
   PlusStatus GetLatestInputItemTimestamp(double& timestamp);
+  PlusStatus GetOldestInputItemTimestamp(double& timestamp);
 
 private:
   vtkPlusVirtualCapture(const vtkPlusVirtualCapture&);   // Not implemented.

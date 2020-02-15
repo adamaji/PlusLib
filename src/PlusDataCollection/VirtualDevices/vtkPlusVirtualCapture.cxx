@@ -243,6 +243,10 @@ PlusStatus vtkPlusVirtualCapture::CloseFile(const char* aFilename /* = NULL */, 
   {
     this->WriteFrames(true);
   }
+  else
+  {
+    LOG_ERROR("NO FRAMES ARE BEING WRITTEN!, why tf are no tracked frames in recorded");
+  }
 
   this->Writer->UpdateDimensionsCustomStrings(this->TotalFramesRecorded, this->GetIsData3D());
   this->Writer->UpdateFieldInImageHeader(this->Writer->GetDimensionSizeString());
@@ -338,7 +342,9 @@ PlusStatus vtkPlusVirtualCapture::InternalUpdate()
   }
 
   int nbFramesBefore = this->RecordedFrames->GetNumberOfTrackedFrames();
-  if (this->GetInputTrackedFrameListSampled(this->LastAlreadyRecordedFrameTimestamp, this->NextFrameToBeRecordedTimestamp, this->RecordedFrames, requestedFramePeriodSec, maxProcessingTimeSec) != PLUS_SUCCESS)
+  double temp_double = 0.0;
+  LOG_WARNING("Attempting to get tracked framelist with " << temp_double << "; " << this->NextFrameToBeRecordedTimestamp << "; " << requestedFramePeriodSec << "; " << maxProcessingTimeSec);
+  if (this->GetInputTrackedFrameListSampled(temp_double, this->NextFrameToBeRecordedTimestamp, this->RecordedFrames, requestedFramePeriodSec, maxProcessingTimeSec) != PLUS_SUCCESS)
   {
     LOG_ERROR("Error while getting tracked frame list from data collector during capturing. Last recorded timestamp: " << std::fixed << this->NextFrameToBeRecordedTimestamp);
   }
@@ -383,6 +389,10 @@ PlusStatus vtkPlusVirtualCapture::InternalUpdate()
     // We haven't received any data so far
     LOG_DYNAMIC("No input data available to capture thread. Waiting until input data arrives.", this->GracePeriodLogLevel);
   }
+  else
+  {
+    LOG_ERROR("Hold your horses, we actually have a recorded frame!!!");
+  }
 
   // Check whether the recording needed more time than the sampling interval
   double recordingTimeSec = vtkIGSIOAccurateTimer::GetSystemTime() - startTimeSec;
@@ -400,10 +410,12 @@ PlusStatus vtkPlusVirtualCapture::InternalUpdate()
   {
     double acquisitionLagSec = recordingLagSec;
     double latestInputTimestamp = this->NextFrameToBeRecordedTimestamp;
+    LOG_WARNING("before getlatestinputitemtimestamp");
     if (GetLatestInputItemTimestamp(latestInputTimestamp) == PLUS_SUCCESS)
     {
       acquisitionLagSec = currentSystemTime - latestInputTimestamp;
     }
+    LOG_WARNING("after getlatestinputitemtimestamp");
     if (acquisitionLagSec < MAX_ALLOWED_RECORDING_LAG_SEC)
     {
       // Frames are available (because acquisitionLagSec < MAX_ALLOWED_RECORDING_LAG_SEC) but recording is falling behind
@@ -596,6 +608,22 @@ PlusStatus vtkPlusVirtualCapture::TakeSnapshot()
 }
 
 //-----------------------------------------------------------------------------
+PlusStatus vtkPlusVirtualCapture::TakeSequenceSnapshot(int aMaxNumberOfFrames)
+{
+  LOG_TRACE("vtkPlusVirtualCapture::TakeSequenceSnapshot");
+  double oldestTimestamp(0);
+  this->GetOldestInputItemTimestamp(oldestTimestamp);  // use oldest timestamp since writeframes clears recorded
+  if (this->GetInputTrackedFrameList(oldestTimestamp, this->RecordedFrames, aMaxNumberOfFrames) != PLUS_SUCCESS)
+  {
+    LOG_ERROR("Error while getting tracked frame list from data collector during capturing. Last recorded timestamp: " << std::fixed << this->NextFrameToBeRecordedTimestamp);
+    return PLUS_FAIL;
+  }
+  int numberOfTrackedFrames = this->RecordedFrames->GetNumberOfTrackedFrames();
+  LOG_TRACE("Writing " << numberOfTrackedFrames << " frames...");
+  return this->WriteFrames(true);
+}
+
+//-----------------------------------------------------------------------------
 PlusStatus vtkPlusVirtualCapture::WriteFrames(bool force)
 {
   if (!this->IsHeaderPrepared && this->RecordedFrames->GetNumberOfTrackedFrames() != 0)
@@ -659,6 +687,18 @@ PlusStatus vtkPlusVirtualCapture::GetInputTrackedFrame(igsioTrackedFrame& aFrame
 }
 
 //-----------------------------------------------------------------------------
+PlusStatus vtkPlusVirtualCapture::GetInputTrackedFrameList(double& lastAlreadyRecordedFrameTimestamp, vtkIGSIOTrackedFrameList* recordedFrames, int aMaxNumberOfFramesToAdd)
+{
+  if (this->OutputChannels.empty())
+  {
+    LOG_ERROR("No output channels defined");
+    return PLUS_FAIL;
+  }
+
+  return this->OutputChannels[0]->GetTrackedFrameList(lastAlreadyRecordedFrameTimestamp, recordedFrames, aMaxNumberOfFramesToAdd);
+}
+
+//-----------------------------------------------------------------------------
 PlusStatus vtkPlusVirtualCapture::GetInputTrackedFrameListSampled(double& lastAlreadyRecordedFrameTimestamp, double& nextFrameToBeRecordedTimestamp, vtkIGSIOTrackedFrameList* recordedFrames, double requestedFramePeriodSec, double maxProcessingTimeSec)
 {
   if (this->OutputChannels.empty())
@@ -679,4 +719,14 @@ PlusStatus vtkPlusVirtualCapture::GetLatestInputItemTimestamp(double& timestamp)
     return PLUS_FAIL;
   }
   return this->OutputChannels[0]->GetLatestTimestamp(timestamp);
+}
+
+PlusStatus vtkPlusVirtualCapture::GetOldestInputItemTimestamp(double& timestamp)
+{
+  if (this->OutputChannels.empty())
+  {
+    LOG_ERROR("No output channels defined");
+    return PLUS_FAIL;
+  }
+  return this->OutputChannels[0]->GetOldestTimestamp(timestamp);
 }

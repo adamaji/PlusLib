@@ -858,7 +858,13 @@ int vtkPlusDataSource::GetBufferSize()
 //-----------------------------------------------------------------------------
 ItemStatus vtkPlusDataSource::GetLatestTimeStamp(double& latestTimestamp)
 {
-  return this->GetBuffer()->GetLatestTimeStamp(latestTimestamp);
+  LOG_TRACE("vtkPlusDataSource::GetLatestTimeStamp");
+  //std::ostringstream thisstr;
+  //this->PrintSelf(thisstr, vtkIndent(0));
+  //LOG_TRACE("printing this: " << thisstr.str());
+  ItemStatus status = this->GetBuffer()->GetLatestTimeStamp(latestTimestamp);
+  LOG_TRACE("status: " << status);
+  return status;
 }
 
 //-----------------------------------------------------------------------------

@@ -435,6 +435,7 @@ PlusStatus vtkPlusChannel::Clear()
 //----------------------------------------------------------------------------
 PlusStatus vtkPlusChannel::GetLatestTimestamp(double& aTimestamp) const
 {
+  LOG_TRACE("vtkPlusChannel::GetLatestTimestamp");
   aTimestamp = 0;
 
   if (this->HasVideoSource())
@@ -792,6 +793,7 @@ PlusStatus vtkPlusChannel::GetTrackedFrameList(double& aTimestampOfLastFrameAlre
       }
 
       BufferItemUidType firstVideoUidToAdd = videoUidFrom;
+      LOG_ERROR("GetTrackedFrameList: videouidfrom " << videoUidFrom << ", mostRecentVideoUid " << mostRecentVideoUid);
       if (mostRecentVideoUid - videoUidFrom + 1 > aMaxNumberOfFramesToAdd)
       {
         // More frames are requested than the maximum allowed frames to add
@@ -909,6 +911,7 @@ PlusStatus vtkPlusChannel::GetTrackedFrameList(double& aTimestampOfLastFrameAlre
     }
   }
 
+  LOG_ERROR("timestampfrom: " << timestampFrom << "; mostrecenttimestamp: " << mostRecentTimestamp);
   // Check input frameTimestamp to be in a valid range
   if (timestampFrom > mostRecentTimestamp)
   {
@@ -1060,13 +1063,17 @@ PlusStatus vtkPlusChannel::GetTrackedFrameListSampled(double& aTimestampOfLastFr
   double startTimeSec = vtkIGSIOAccurateTimer::GetSystemTime();
 
   double mostRecentTimestamp(0);
-  RETURN_WITH_FAIL_IF(this->GetMostRecentTimestamp(mostRecentTimestamp) != PLUS_SUCCESS,
-                      "vtkPlusChannel::GetTrackedFrameListSampled failed: unable to get most recent timestamp. Probably no frames have been acquired yet.");
+  PlusStatus mystatus = this->GetMostRecentTimestamp(mostRecentTimestamp);
+  RETURN_WITH_FAIL_IF(mystatus != PLUS_SUCCESS,
+                      "vtkPlusChannel::GetTrackedFrameListSampled failed: unable to get most recent timestamp. Probably no frames have been acquired yet. " << mystatus << ", " << PLUS_SUCCESS);
 
+  LOG_TRACE("Post return_with_fail_if, ");
   PlusStatus status = PLUS_SUCCESS;
-  // Add frames to input trackedFrameList
+   // Add frames to input trackedFrameList
+  LOG_ERROR("Pre add frames to input trackedframeslist, mostrecenttimestamp: " << mostRecentTimestamp << "; nextframetobeaddedtimestamp: " << aTimestampOfNextFrameToBeAdded);
   for (; aTimestampOfNextFrameToBeAdded <= mostRecentTimestamp; aTimestampOfNextFrameToBeAdded += aSamplingPeriodSec)
   {
+    LOG_WARNING("ITERATING THROUGH FRAMES TO BE ADDED " << aTimestampOfNextFrameToBeAdded);
     // If the time that is allowed for adding of frames is expired then stop the processing now
     if (maxTimeLimitSec > 0 && vtkIGSIOAccurateTimer::GetSystemTime() - startTimeSec > maxTimeLimitSec)
     {
@@ -1101,6 +1108,7 @@ PlusStatus vtkPlusChannel::GetTrackedFrameListSampled(double& aTimestampOfLastFr
     if (aTimestampOfLastFrameAlreadyGot != UNDEFINED_TIMESTAMP && closestTimestamp <= aTimestampOfLastFrameAlreadyGot)
     {
       // This frame has been already added. Don't spend time with retrieving this frame, just jump to the next
+      LOG_TRACE("Frame has already been added. aTimestampOfLastFrameAlreadyGot: " << aTimestampOfLastFrameAlreadyGot << ", closestTimestamp: " << closestTimestamp);
       continue;
     }
     // Get tracked frame from buffer (actually copies pixel and field data)
@@ -1118,9 +1126,13 @@ PlusStatus vtkPlusChannel::GetTrackedFrameListSampled(double& aTimestampOfLastFr
       LOG_ERROR("vtkPlusChannel::GetTrackedFrameListSampled: Unable to add tracked frame to the list");
       status = PLUS_FAIL;
     }
+    else
+    {
+      LOG_ERROR("OH MY GOD, we've added a frame.");
+    }
   }
 
-
+  LOG_ERROR("GetTrackedFrameListSampled status: " << status << ", want success: " << PLUS_SUCCESS);
   return status;
 }
 
@@ -1262,6 +1274,7 @@ PlusStatus vtkPlusChannel::GetOldestTimestamp(double& ts)
 //----------------------------------------------------------------------------
 PlusStatus vtkPlusChannel::GetMostRecentTimestamp(double& ts)
 {
+  LOG_TRACE("vtkPlusChannel::GetMostRecentTimeStamp");
   ts = 0;
 
   double latestVideoTimestamp(0);
@@ -1269,10 +1282,37 @@ PlusStatus vtkPlusChannel::GetMostRecentTimestamp(double& ts)
   if (this->GetVideoDataAvailable())
   {
     // Get the most recent timestamp from the buffer
-    RETURN_WITH_FAIL_IF(this->VideoSource->GetLatestTimeStamp(latestVideoTimestamp) != ITEM_OK,
-                        "Unable to get latest timestamp from video buffer!");
+    ItemStatus status = this->VideoSource->GetLatestTimeStamp(latestVideoTimestamp);
+    LOG_TRACE("status: " << status << ", " << typeid(status).name() << ", " << typeid(ITEM_OK).name());
+    LOG_TRACE("wtf should item ok be??? " << ITEM_OK);
+    if(status!=ITEM_OK)
+    {
+      LOG_TRACE("STATUS DOES NOT EQUAL ITEMOK " << status << ", " << ITEM_OK);
+    }
+    if(status!=ITEM_NOT_AVAILABLE_YET)
+    {
+      LOG_TRACE("STATUS DOES NOT EQUAL NOTAVAILABLEYET " << status << ", " << ITEM_NOT_AVAILABLE_YET);
+    }
+    if(status!=ITEM_NOT_AVAILABLE_ANYMORE)
+    {
+      LOG_TRACE("STATUS DOES NOT EQUAL NOTAVAILABLEANYMORE " << status << ", " << ITEM_NOT_AVAILABLE_ANYMORE);
+    }
+    if(status!=ITEM_UNKNOWN_ERROR)
+    {
+      LOG_TRACE("STATUS DOES NOT EQUAL ITEMUNKNOWNERROR " << status << ", " << ITEM_UNKNOWN_ERROR);
+    }
+    bool check_status = (status != ITEM_OK);
+    LOG_TRACE("pre return_with_fail_if");
+    RETURN_WITH_FAIL_IF(status != ITEM_OK,
+                        "Unable to get latest timestamp from video buffer! status: " << status << ", ITEM_OK: " << ITEM_OK);
+    LOG_TRACE("post return_with_fail_if");
+    if(!check_status)
+    {
+      LOG_TRACE("wtf?");
+    }
   }
 
+  LOG_TRACE("we're outside now");
   double latestTrackerTimestamp(0); // the latest tracker timestamp that is available for all tools
   if (this->GetTrackingEnabled())
   {

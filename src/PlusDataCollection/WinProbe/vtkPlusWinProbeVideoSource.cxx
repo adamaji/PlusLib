@@ -408,7 +408,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   if(header->TotalFrameCounter == 0)
   {
     first_timestamp = header->TimeStamp / 1000.0;
-    LOG_DEBUG("First frame timestamp: " << first_timestamp);
+    LOG_DEBUG("First frame timestamp: " << first_timestamp << " with mode: " << std::hex << usMode);
   }
   //timestamp counters are in milliseconds since last sequencer restart
   double timestamp = (header->TimeStamp / 1000.0) - first_timestamp;
@@ -424,7 +424,10 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   }
   m_LastTimestamp = timestamp;
   timestamp += m_TimestampOffset;
-  LOG_DEBUG("Frame: " << FrameNumber << ". Mode: " << std::setw(4) << std::hex << usMode << ". Timestamp: " << timestamp);
+  if(!(usMode & B))
+  {
+    LOG_DEBUG("Frame: " << FrameNumber << ". Mode: " << std::setw(4) << std::hex << usMode << ". Timestamp: " << timestamp);
+  }
 
   if(usMode & B && !m_PrimarySources.empty() // B-mode and primary source is defined
       || usMode & M_PostProcess && !m_ExtraSources.empty() // M-mode and extra source is defined
@@ -545,12 +548,20 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   }
   else if(usMode & ARFI)
   {
+    LOG_WARNING("SIZE! " << m_ExtraSources.size());
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
     {
+      LOG_WARNING("quadbfcount: " << quadBFCount << "; getquadbfcount " << GetARFISSQuadBFCount());
       int bSize = m_SSDecimation * m_PrimaryFrameSize[1] * m_PrimaryFrameSize[0];
       int timeblock = (4 / quadBFCount) * arfiGeometry->LineRepeatCount * sizeof(int32_t) * 30;
-      assert(length == bSize + frameSize[0] * frameSize[1] * frameSize[2] * sizeof(int32_t) + timeblock);
+      LOG_WARNING("m_SSDecimation " << m_SSDecimation << "; m_primaryFrameSizes " << m_PrimaryFrameSize[0] << "," << m_PrimaryFrameSize[1] << "; quadBFCount " << quadBFCount << "; linerepeatcount " << arfiGeometry->LineRepeatCount);
+      LOG_WARNING("length " << length << "; bsize " << bSize << "; framesizes " << frameSize[0] << "," << frameSize[1] << "," << frameSize[2] << "; timeblock " << timeblock);
+      // assert(length == bSize + frameSize[0] * frameSize[1] * frameSize[2] * sizeof(int32_t) + (timeblock/2));
+      assert(length == bSize + 1024 * 1024 * 30 * sizeof(int32_t) + (timeblock/2));
       int32_t* iData = reinterpret_cast<int32_t*>(data + bSize);
+      // int numLocs = 30;
+      m_CustomFields["nDims"].first = FRAMEFIELD_FORCE_SERVER_SEND;
+      m_CustomFields["nDims"].second = 3;
 
       if(m_ExtraSources[i]->AddItem(iData,
                                     US_IMG_ORIENT_FM,
@@ -563,6 +574,36 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
       {
         LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
       }
+      else {
+        LOG_WARNING("No error! Success adding item to ARFI video source! " << m_ExtraSources[i]->GetSourceId());
+        LOG_ERROR("cUSTOM field values: " << m_CustomFields["nDims"].second << "; " << m_CustomFields["ElementSpacing"].second << "; " << m_CustomFields["TransformMatrix"].second);
+      }
+      LOG_WARNING("INDIVIDUAL PRIMARY FRAME SIZE [2]: " << m_PrimaryFrameSize[2]);
+      // split up
+      /*
+      FrameSizeType individualFrameSize = { frameSize[0], frameSize[1], 1 };
+      double timestampOffset = 1.0 / numLocs;
+      int32_t* tempData;
+      for (int j = 0; j < numLocs; j++)
+      {
+        tempData = reinterpret_cast<int32_t*>(iData + (j * frameSize[0] * frameSize[1]));
+        assert(reinterpret_cast<int>(tempData) < reinterpret_cast<int>(data) + length);
+        if(m_ExtraSources[i]->AddItem(tempData,
+                                      US_IMG_ORIENT_FM,
+                                      individualFrameSize, VTK_INT,
+                                      1, US_IMG_RF_REAL, 0,
+                                      this->FrameNumber + j,
+                                      timestamp + timestampOffset * j,
+                                      timestamp + timestampOffset * j,
+                                      &m_CustomFields) != PLUS_SUCCESS)
+        {
+          LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
+        }
+        else {
+          LOG_WARNING("No error! Success adding item to ARFI video source! " << m_ExtraSources[i]->GetSourceId() << ", " << j);
+        }
+      }
+      */
     }
   }
   else if(usMode & BFRFALineImage_RFData)
@@ -803,6 +844,8 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
     SetARFIIsEnabled(true);
     SetARFIIsRFSampleDataCaptureEnabled(true);
     LOG_DEBUG("GetARFIIsRFSampleDataCaptureEnabled: " << GetARFIIsRFSampleDataCaptureEnabled());
+    SetARFIIsRFSampleDataCaptureEnabled(true);
+    LOG_DEBUG("GetARFIIsRFSampleDataCaptureEnabled: " << GetARFIIsRFSampleDataCaptureEnabled());
   }
   if(m_Mode == Mode::CFD)
   {
@@ -852,7 +895,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
     return PLUS_FAIL;
   }
   WPSetSize(m_PrimaryFrameSize[0], m_PrimaryFrameSize[1]);
-  SetMaxDmaTransferSize(0x100000);
+  SetMaxDmaTransferSize(0x10000);
   quadBFCount = GetARFISSQuadBFCount();
   if(!m_UseDeviceFrameReconstruction)
   {
@@ -1644,12 +1687,21 @@ bool vtkPlusWinProbeVideoSource::GetARFIEnabled()
 
 PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
 {
+  LOG_DEBUG("Attempting to ARFIPush!!! =============================================");
   if (this->Connected && m_Mode == Mode::ARFI)
   {
+    LOG_DEBUG(::GetARFIIsEnabled());
+    LOG_DEBUG("SUCCEEDING AT ARFI PUSHING!!! ========================================");
     ::ARFIPush();
     return PLUS_SUCCESS;
   }
+  LOG_DEBUG("failed.");
   return PLUS_FAIL;
+}
+
+bool vtkPlusWinProbeVideoSource::GetARFIIsEnabled()
+{
+  return ::GetARFIIsEnabled();
 }
 
 std::string vtkPlusWinProbeVideoSource::GetTransducerID()

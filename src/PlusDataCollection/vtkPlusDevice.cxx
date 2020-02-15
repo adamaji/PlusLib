@@ -853,6 +853,10 @@ vtkXMLDataElement* vtkPlusDevice::FindThisDeviceElement(vtkXMLDataElement* rootX
   {
     deviceXMLElement = dataCollectionElement->GetNestedElement(i);
 
+    if (deviceXMLElement->GetAttribute("Id") != NULL){
+      LOCAL_LOG_TRACE(deviceXMLElement->GetAttribute("Id"));
+    }
+
     if (deviceXMLElement->GetName() != NULL &&
         deviceXMLElement->GetAttribute("Id") != NULL &&
         std::string(deviceXMLElement->GetName()) == "Device" &&

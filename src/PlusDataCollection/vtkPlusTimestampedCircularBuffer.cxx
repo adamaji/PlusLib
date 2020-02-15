@@ -173,7 +173,7 @@ ItemStatus vtkPlusTimestampedCircularBuffer::GetBufferItemPointerFromUid(const B
   BufferItemUidType oldestUid = this->LatestItemUid - (this->NumberOfItems - 1);
   if (uid < oldestUid)
   {
-    LOG_WARNING("Buffer item is not in the buffer (Uid: " << uid << ")!");
+    LOG_WARNING("Buffer item is not in the buffer (Uid: " << uid << ")!" << " oldest: " << oldestUid);
     itemPtr = NULL;
     return ITEM_NOT_AVAILABLE_ANYMORE;
   }
@@ -211,13 +211,17 @@ ItemStatus vtkPlusTimestampedCircularBuffer::GetFilteredTimeStamp(const BufferIt
 {
   igsioLockGuard< vtkPlusTimestampedCircularBuffer > bufferGuardedLock(this);
   StreamBufferItem* itemPtr = NULL;
+  LOG_ERROR("before getbufferitempointerfromuid -- in getfilteredtimestamp");
   ItemStatus status = GetBufferItemPointerFromUid(uid, itemPtr);
+  LOG_ERROR("after getbufferitempointerfromuid -- uid " << uid << ", status " << status);
   if (status != ITEM_OK)
   {
+    LOG_ERROR("not ok");
     filteredTimestamp = 0;
     return status;
   }
   filteredTimestamp = itemPtr->GetFilteredTimestamp(this->LocalTimeOffsetSec);
+  LOG_ERROR("ok, status " << status << ", " << this->LocalTimeOffsetSec << ", " << filteredTimestamp);
   return status;
 }
 
@@ -226,6 +230,7 @@ ItemStatus vtkPlusTimestampedCircularBuffer::GetUnfilteredTimeStamp(const Buffer
 {
   igsioLockGuard< vtkPlusTimestampedCircularBuffer > bufferGuardedLock(this);
   StreamBufferItem* itemPtr = NULL;
+  LOG_ERROR("before getbufferitempointerfromuid -- in getunfilteredtimestamperporttable");
   ItemStatus status = GetBufferItemPointerFromUid(uid, itemPtr);
   if (status != ITEM_OK)
   {
@@ -277,6 +282,7 @@ ItemStatus vtkPlusTimestampedCircularBuffer::GetIndex(const BufferItemUidType ui
 {
   igsioLockGuard< vtkPlusTimestampedCircularBuffer > bufferGuardedLock(this);
   StreamBufferItem* itemPtr = NULL;
+  LOG_ERROR("before getbufferitempointerfromuid -- in getindex");
   ItemStatus status = GetBufferItemPointerFromUid(uid, itemPtr);
   if (status != ITEM_OK)
   {

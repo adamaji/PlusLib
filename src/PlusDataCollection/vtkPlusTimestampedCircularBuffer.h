@@ -83,7 +83,10 @@ public:
   /*! Get timestamp by frame UID associated with the buffer item  */
   virtual ItemStatus GetLatestTimeStamp( double& timestamp )
   {
-    return this->GetTimeStamp( this->GetLatestItemUidInBuffer(), timestamp );
+    LOG_TRACE("vtkPlusTimestampedCircularBuffer::GetLatestTimeStamp");
+    ItemStatus status = this->GetTimeStamp( this->GetLatestItemUidInBuffer(), timestamp );
+    LOG_TRACE("status: " << status);
+    return status;
   }
 
   virtual ItemStatus GetOldestTimeStamp( double& timestamp )

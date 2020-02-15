@@ -190,6 +190,7 @@ public:
   bool GetARFIEnabled();
   /*! If running in ARFI mode, does an ARFI push. Otherwise does nothing and returns failure status. */
   PlusStatus ARFIPush();
+  bool GetARFIIsEnabled();
 
   int GetTransducerInternalID();
 

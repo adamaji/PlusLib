@@ -353,7 +353,7 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   {
     frameSize[0] = arfiGeometry->SamplesPerLine;
     frameSize[1] = arfiGeometry->LineCount * arfiGeometry->LineRepeatCount;
-    frameSize[2] = 30;
+    frameSize[2] = 1;
     if(frameSize != m_ExtraFrameSize)
     {
       LOG_INFO("ARFI frame size updated. Adjusting buffer size and spacing.");
@@ -563,25 +563,31 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
   {
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
     {
+      unsigned numFrames = 30;  // this needs to change if the lateral/depth values can change later
       int bSize = m_SSDecimation * m_PrimaryFrameSize[1] * m_PrimaryFrameSize[0];
       int timeblock = (4 / quadBFCount) * arfiGeometry->LineRepeatCount * sizeof(int32_t) * 30;
-      assert(length == bSize + frameSize[0] * frameSize[1] * frameSize[2] * sizeof(int32_t) + timeblock);
-      int32_t* iData = reinterpret_cast<int32_t*>(data + bSize);
+      timeblock = timeblock / 2;  // for x8 bf engine? why isn't quadBFCount taking this into account?
+      assert(length == bSize + frameSize[0] * frameSize[1] * numFrames * sizeof(int32_t) + timeblock);
 
       // split up the 1024x1024x30 ARFI return data to be 30 frames of 1024x1024
-      FrameSizeType individualFrameSize = { frameSize[0], frameSize[1] };
-      for(int j = 0; j < frameSize[2]; j++)
+      int32_t* tempData;
+      // need to spoof the timestamps since the arfi frame comes a few seconds after the push
+      double currentTime = vtkIGSIOAccurateTimer::GetSystemTime();
+      double timeStepSize = 0.002;
+      for(unsigned j = 0; j < numFrames; j++)
       {
-        if(m_ExtraSources[i]->AddItem(iData + (j * sizeof(int32_t) * frameSize[0] * frameSize[1]),
+        tempData = reinterpret_cast<int32_t*>(data + bSize + (j * frameSize[0] * frameSize[1] * sizeof(int32_t)));
+        assert(tempData < reinterpret_cast<int32_t*>(data + length - timeblock));
+        if(m_ExtraSources[i]->AddItem(tempData,
                                       US_IMG_ORIENT_FM,
-                                      individualFrameSize, VTK_INT,
+                                      frameSize, VTK_INT,
                                       1, US_IMG_RF_REAL, 0,
-                                      this->FrameNumber + j,
-                                      timestamp,
-                                      timestamp,
+                                      this->FrameNumber,
+                                      currentTime + j * timeStepSize,
+                                      currentTime + j * timeStepSize,
                                       &m_CustomFields) != PLUS_SUCCESS)
         {
-          LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId());
+          LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId() << "; Frame " << j);
         }
       }
     }
@@ -826,7 +832,7 @@ PlusStatus vtkPlusWinProbeVideoSource::InternalConnect()
   {
     SetARFIIsEnabled(true);
     // set the initial frame size here, so we don't need to adjust on first ARFIPush
-    m_ExtraFrameSize = { 1024, 16 * 64, 30 };
+    m_ExtraFrameSize = { 1024, 16 * 64, 1 };
     this->AdjustBufferSizes();
     std::vector<int32_t> zeroData(m_ExtraFrameSize[0] * m_ExtraFrameSize[1] * m_ExtraFrameSize[2], 0);
     // add a fake zero-filled frame immediately, because the first frame seems to get lost somehow

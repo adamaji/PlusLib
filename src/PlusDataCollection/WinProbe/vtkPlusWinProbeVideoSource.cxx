@@ -1665,6 +1665,7 @@ PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
   if(this->Connected && m_Mode == Mode::ARFI)
   {
     ::ARFIPush();
+    Sleep(12000);  // allow some time to buffer frames
     return PLUS_SUCCESS;
   }
   return PLUS_FAIL;

@@ -220,6 +220,8 @@ public:
   int32_t GetBFrameRateLimit();
 
   /*! If running in ARFI mode, does an ARFI push. Otherwise does nothing and returns failure status. */
+  void SetARFIEnabled(bool value);
+  bool GetARFIEnabled();
   PlusStatus ARFIPush();
 
   int GetTransducerInternalID();

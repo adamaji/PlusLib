@@ -589,6 +589,10 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
         {
           LOG_WARNING("Error adding item to ARFI video source " << m_ExtraSources[i]->GetSourceId() << "; Frame " << j);
         }
+        else
+        {
+          LOG_INFO("Successfully added item to ARFI video source " << m_ExtraSources[i]->GetSourceId() << "; Frame " << j);
+        }
       }
     }
   }
@@ -1697,7 +1701,7 @@ PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
   if(this->Connected && m_Mode == Mode::ARFI)
   {
     ::ARFIPush();
-    Sleep(12000);  // allow some time to buffer frames
+    Sleep(8000);  // allow some time to buffer frames
     return PLUS_SUCCESS;
   }
   return PLUS_FAIL;

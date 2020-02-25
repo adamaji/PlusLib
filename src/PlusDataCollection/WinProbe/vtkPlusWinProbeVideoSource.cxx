@@ -1549,6 +1549,10 @@ PlusStatus vtkPlusWinProbeVideoSource::ARFIPush()
 {
   if (this->Connected && m_Mode == Mode::ARFI)
   {
+    for(unsigned i = 0; i < m_ExtraSources.size(); i++)
+    {
+      m_ExtraSources[i]->Clear();  // clear the rf buffer to ensure frames in the buffer are current
+    }
     ::ARFIPush();
     Sleep(8000);  // allow some time to buffer frames
     return PLUS_SUCCESS;

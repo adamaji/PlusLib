@@ -519,11 +519,9 @@ void vtkPlusWinProbeVideoSource::FrameCallback(int length, char* data, char* hHe
     for(unsigned i = 0; i < m_ExtraSources.size(); i++)
     {
       // send the ARFI data as one long 2D frame to be processed downstream
-      int32_t* tempData;
+      int32_t* tempData = reinterpret_cast<int32_t*>(data);
       // need to spoof the timestamps since the arfi data comes a few seconds after the push
       double currentTime = vtkIGSIOAccurateTimer::GetSystemTime();
-
-      tempData = reinterpret_cast<int32_t*>(data);
       if(m_ExtraSources[i]->AddItem(tempData,
                                     US_IMG_ORIENT_FM,
                                     frameSize, VTK_INT,

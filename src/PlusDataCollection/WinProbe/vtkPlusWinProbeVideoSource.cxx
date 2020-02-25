@@ -1486,6 +1486,46 @@ int32_t vtkPlusWinProbeVideoSource::GetMDepth()
   return m_MDepth;
 }
 
+void vtkPlusWinProbeVideoSource::SetARFIStartSample(int32_t value)
+{
+  if(Connected)
+  {
+    ::SetARFIStartSample(value);
+    SetPendingRecreateTables(true);
+  }
+}
+
+void vtkPlusWinProbeVideoSource::GetARFIStartSample()
+{
+  int32_t startSample = -1;
+  if(Connected)
+  {
+    startSample = ::GetARFIStartSample();
+  }
+  return startSample;
+}
+
+void vtkPlusWinProbeVideoSource::SetARFIStopSample(int32_t value)
+{
+  if(Connected)
+  {
+    ::SetARFIStopSample(value);
+    SetPendingRecreateTables(true);
+  }
+}
+
+void vtkPlusWinProbeVideoSource::GetARFIStopSample()
+{
+  int32_t stopSample = -1;
+  if(Connected)
+  {
+    stopSample = ::GetARFIStopSample();
+  }
+  return stopSample;
+}
+
+
+
 //----------------------------------------------------------------------------
 PlusStatus vtkPlusWinProbeVideoSource::SetTransducerID(std::string guid)
 {

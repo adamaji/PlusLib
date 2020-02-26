@@ -182,9 +182,9 @@ public:
   /*! If running in ARFI mode, does an ARFI push. Otherwise does nothing and returns failure status. */
   PlusStatus ARFIPush();
   void SetARFIStartSample(int32_t value);
-  void GetARFIStartSample();
+  int32_t GetARFIStartSample();
   void SetARFIStopSample(int32_t value);
-  void GetARFIStopSample();
+  int32_t GetARFIStopSample();
 
   int GetTransducerInternalID();
 

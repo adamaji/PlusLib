@@ -1495,7 +1495,7 @@ void vtkPlusWinProbeVideoSource::SetARFIStartSample(int32_t value)
   }
 }
 
-void vtkPlusWinProbeVideoSource::GetARFIStartSample()
+int32_t vtkPlusWinProbeVideoSource::GetARFIStartSample()
 {
   int32_t startSample = -1;
   if(Connected)
@@ -1514,7 +1514,7 @@ void vtkPlusWinProbeVideoSource::SetARFIStopSample(int32_t value)
   }
 }
 
-void vtkPlusWinProbeVideoSource::GetARFIStopSample()
+int32_t vtkPlusWinProbeVideoSource::GetARFIStopSample()
 {
   int32_t stopSample = -1;
   if(Connected)

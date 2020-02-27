@@ -1198,7 +1198,7 @@ int32_t vtkPlusWinProbeVideoSource::GetBMultiFocalZoneCount()
 //----------------------------------------------------------------------------
 PlusStatus vtkPlusWinProbeVideoSource::SetBMultiFocalZoneCount(int32_t count)
 {
-  assert(index > 0 && index =< 4);
+  assert(count > 0 && count =< 4);
   m_BMultiTxCount = count;
   if(Connected)
   {
@@ -1221,7 +1221,7 @@ int32_t vtkPlusWinProbeVideoSource::GetARFIMultiFocalZoneCount()
 //----------------------------------------------------------------------------
 PlusStatus vtkPlusWinProbeVideoSource::SetARFIMultiFocalZoneCount(int32_t count)
 {
-  assert(index > 0 && index =< 6);
+  assert(count > 0 && count =< 6);
   m_ARFIMultiTxCount = count;
   if(Connected)
   {

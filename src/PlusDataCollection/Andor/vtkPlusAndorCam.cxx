@@ -177,7 +177,7 @@ PlusStatus vtkPlusAndorCam::InitializeAndorCam()
     return PLUS_FAIL;
   }
 
-  LOG_INFO("yowzaaa, was able to initialize Andor SDK!");
+  LOG_INFO("yowzaaa2, was able to initialize Andor SDK!");
 
   // Check the safe temperature, and the maximum allowable temperature on the camera.
   // Use the min of the two as the safe temp.
@@ -219,7 +219,7 @@ PlusStatus vtkPlusAndorCam::InternalDisconnect()
   // It is vital to raise the temperature to above 0 before closing
   // to reduce damage to the head. This routine simply blocks exiting
   // the program until the temp is above 0
-  if (temperature < 0) 
+  if (temperature < 0)
   {
     LOG_INFO("Raising the Andor camera cooler temperature to above 0");
     if (CheckAndAdjustCameraTemperature(this->AndorSafeTemperature) != PLUS_SUCCESS)

@@ -48,7 +48,7 @@ public:
   /*! Get the shutter for the camera */
   int GetAndorShutter();
 
-  /*! Set the shutter for the camera */
+  /*! TODO: update docstrings */
   PlusStatus SetAndorExposureTime(float exposureTime);
 
   /*! Get the shutter for the camera */
@@ -101,6 +101,9 @@ public:
 
   /*! Get the shutter for the camera */
   int GetAndorSafeTemperature();
+
+  vtkPlusAndorCam(const vtkPlusAndorCam&) = delete;
+  void operator=(const vtkPlusAndorCam&) = delete;
 
 protected:
   /*! Constructor */
@@ -163,10 +166,6 @@ protected:
   int                   AndorCoolTemperature;
   int                   AndorSafeTemperature;
   int                   AndorCurrentTemperature;
-
-private:
-  vtkPlusAndorCam(const vtkPlusAndorCam&);  // Not implemented
-  void operator=(const vtkPlusAndorCam&);  // Not implemented
 };
 
 #endif

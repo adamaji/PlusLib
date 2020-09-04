@@ -2344,11 +2344,11 @@ IF(PLUS_USE_ANDOR_CAM)
     MESSAGE(ERROR "PLUS_USE_OPTICAL_MARKER_TRACKER requires PLUS_USE_OpenCV option enabled")
   ENDIF()
   SET(Andor_SRCS
-    Andor/vtkPlusAndorCam.cxx
+    Andor/vtkPlusAndorCamera.cxx
     )
   IF(MSVC OR ${CMAKE_GENERATOR} MATCHES "Xcode")
     SET(Andor_HDRS
-      Andor/vtkPlusAndorCam.h
+      Andor/vtkPlusAndorCamera.h
       )
   ENDIF()
   

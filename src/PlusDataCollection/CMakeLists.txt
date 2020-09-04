@@ -54,7 +54,7 @@ OPTION(PLUS_USE_OPTICAL_MARKER_TRACKER "Provide support of fiducial marker track
 OPTION(PLUS_USE_OPENHAPTICS "Provide support for OpenHaptics devices." OFF)
 OPTION(PLUS_USE_BLACKMAGIC_DECKLINK "Provide support for BlackMagic DeckLink capture cards." OFF)
 OPTION(PLUS_USE_INFRARED_SEEK_CAM "Provide support for capturing an Infrared Seek Cam" OFF)
-OPTION(PLUS_USE_ANDOR_CAM "Provide support for capturing images from Andor Camera. Requires PLUS_USE_OpenCV." OFF)
+OPTION(PLUS_USE_ANDOR_CAMERA "Provide support for capturing images from Andor Camera. Requires PLUS_USE_OpenCV." OFF)
 OPTION(PLUS_USE_INFRARED_TEQ1_CAM "Provide support for capturing an Infrared Therma Expert Q1 Camera capture stream" OFF)
 OPTION(PLUS_USE_WITMOTIONTRACKER "Provide support for the WitMotion class of inertial measurement units" OFF)
 
@@ -2339,9 +2339,9 @@ ENDIF()
 
 # --------------------------------------------------------------------------
 # Andor Cam support
-IF(PLUS_USE_ANDOR_CAM)
+IF(PLUS_USE_ANDOR_CAMERA)
   IF(NOT PLUS_USE_OpenCV)
-    MESSAGE(ERROR "PLUS_USE_OPTICAL_MARKER_TRACKER requires PLUS_USE_OpenCV option enabled")
+    MESSAGE(ERROR "PLUS_USE_ANDOR_CAMERA requires PLUS_USE_OpenCV option enabled")
   ENDIF()
   SET(Andor_SRCS
     Andor/vtkPlusAndorCamera.cxx

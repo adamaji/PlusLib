@@ -32,7 +32,7 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRenderer.h"
 #include "vtkSmartPointer.h"
-#include "vtkPlusAndorCam.h"
+#include "vtkPlusAndorCamera.h"
 
 #include "vtkXMLUtilities.h"
 #include "vtksys/CommandLineArguments.hxx"
@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 	}
 
 	
-	vtkSmartPointer< vtkPlusAndorCam > andorCamDevice = vtkSmartPointer< vtkPlusAndorCam >::New();
+	vtkSmartPointer< vtkPlusAndorCamera > andorCamDevice = vtkSmartPointer< vtkPlusAndorCamera >::New();
 	andorCamDevice->SetDeviceId("VideoDevice");
 
 	

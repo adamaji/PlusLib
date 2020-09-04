@@ -4,14 +4,14 @@
   See License.txt for details.
 =========================================================Plus=header=end*/
 
-#ifndef __vtkPlusAndorCam_h
-#define __vtkPlusAndorCam_h
+#ifndef __vtkPlusAndorCamera_h
+#define __vtkPlusAndorCamera_h
 
 #include "vtkPlusDataCollectionExport.h"
 #include "vtkPlusDevice.h"
 
 /*!
- \class vtkPlusAndorCam
+ \class vtkPlusAndorCamera
  \brief Class for acquiring images from Andor cameras
 
  Requires PLUS_USE_ANDOR_CAM option in CMake.
@@ -19,12 +19,12 @@
 
  \ingroup PlusLibDataCollection.
 */
-class vtkPlusDataCollectionExport vtkPlusAndorCam: public vtkPlusDevice
+class vtkPlusDataCollectionExport vtkPlusAndorCamera: public vtkPlusDevice
 {
 public:
   /*! Constructor for a smart pointer of this class*/
-  static vtkPlusAndorCam* New();
-  vtkTypeMacro(vtkPlusAndorCam, vtkPlusDevice);
+  static vtkPlusAndorCamera* New();
+  vtkTypeMacro(vtkPlusAndorCamera, vtkPlusDevice);
   virtual void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
 
   /*! Specify the device connected to this class */
@@ -102,15 +102,15 @@ public:
   /*! Get the shutter for the camera */
   int GetAndorSafeTemperature();
 
-  vtkPlusAndorCam(const vtkPlusAndorCam&) = delete;
-  void operator=(const vtkPlusAndorCam&) = delete;
+  vtkPlusAndorCamera(const vtkPlusAndorCamera&) = delete;
+  void operator=(const vtkPlusAndorCamera&) = delete;
 
 protected:
   /*! Constructor */
-  vtkPlusAndorCam();
+  vtkPlusAndorCamera();
 
   /*! Destructor */
-  ~vtkPlusAndorCam();
+  ~vtkPlusAndorCamera();
 
   /*! Device-specific connect */
   virtual PlusStatus InternalConnect();
@@ -124,8 +124,8 @@ protected:
   /*! Device-specific recording stop */
   //virtual PlusStatus InternalStopRecording();
 
-  /*! Initialize vtkPlusAndorCam */
-  PlusStatus InitializeAndorCam();
+  /*! Initialize vtkPlusAndorCamera */
+  PlusStatus InitializeAndorCamera();
 
   /*! The internal function which actually does the grab. */
   PlusStatus InternalUpdate();

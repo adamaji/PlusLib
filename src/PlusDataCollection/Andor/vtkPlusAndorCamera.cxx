@@ -6,16 +6,16 @@ See License.txt for details.
 
 #include "PlusConfigure.h"
 #include "vtkImageData.h"
-#include "vtkPlusAndorCam.h"
+#include "vtkPlusAndorCamera.h"
 #include "ATMCD32D.h"
 
-vtkStandardNewMacro(vtkPlusAndorCam);
+vtkStandardNewMacro(vtkPlusAndorCamera);
 
 // ----------------------------------------------------------------------------
 // Public member operators ----------------------------------------------------
 
 // ----------------------------------------------------------------------------
-void vtkPlusAndorCam::PrintSelf(ostream& os, vtkIndent indent)
+void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 
@@ -33,9 +33,9 @@ void vtkPlusAndorCam::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::ReadConfiguration(vtkXMLDataElement* rootConfigElement)
+PlusStatus vtkPlusAndorCamera::ReadConfiguration(vtkXMLDataElement* rootConfigElement)
 {
-  LOG_TRACE("vtkPlusAndorCam::ReadConfiguration");
+  LOG_TRACE("vtkPlusAndorCamera::ReadConfiguration");
   XML_FIND_DEVICE_ELEMENT_REQUIRED_FOR_READING(deviceConfig, rootConfigElement);
 
   // Load the camera properties parameters -----------------------------------------------
@@ -55,7 +55,7 @@ PlusStatus vtkPlusAndorCam::ReadConfiguration(vtkXMLDataElement* rootConfigEleme
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::WriteConfiguration(vtkXMLDataElement* rootConfigElement)
+PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigElement)
 {
   XML_FIND_DEVICE_ELEMENT_REQUIRED_FOR_WRITING(deviceConfig, rootConfigElement);
 
@@ -75,11 +75,11 @@ PlusStatus vtkPlusAndorCam::WriteConfiguration(vtkXMLDataElement* rootConfigElem
 
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::NotifyConfigured()
+PlusStatus vtkPlusAndorCamera::NotifyConfigured()
 {
   if (this->OutputChannels.size() > 1)
   {
-    LOG_WARNING("vtkPlusAndorCam is expecting one output channel and there are "
+    LOG_WARNING("vtkPlusAndorCamera is expecting one output channel and there are "
                 << this->OutputChannels.size() << " channels. First output channel will be used.");
   }
 
@@ -94,7 +94,7 @@ PlusStatus vtkPlusAndorCam::NotifyConfigured()
 }
 
 // ----------------------------------------------------------------------------
-std::string vtkPlusAndorCam::GetSdkVersion()
+std::string vtkPlusAndorCamera::GetSdkVersion()
 {
   std::ostringstream versionString;
 
@@ -115,7 +115,7 @@ std::string vtkPlusAndorCam::GetSdkVersion()
 // Protected member operators ---------------------------------------------
 
  //----------------------------------------------------------------------------
-vtkPlusAndorCam::vtkPlusAndorCam()
+vtkPlusAndorCamera::vtkPlusAndorCamera()
 {
   this->RequireImageOrientationInConfiguration = true;
 
@@ -141,7 +141,7 @@ vtkPlusAndorCam::vtkPlusAndorCam()
 }
 
 // ----------------------------------------------------------------------------
-vtkPlusAndorCam::~vtkPlusAndorCam()
+vtkPlusAndorCamera::~vtkPlusAndorCamera()
 {
   if (!this->Connected)
   {
@@ -150,7 +150,7 @@ vtkPlusAndorCam::~vtkPlusAndorCam()
 }
 
 // Check for the error codes returned from AndorSdK ---------------------------
-PlusStatus vtkPlusAndorCam::CheckAndorSDKError(unsigned int _ui_err, const std::string _cp_func)
+PlusStatus vtkPlusAndorCamera::CheckAndorSDKError(unsigned int _ui_err, const std::string _cp_func)
 {
   if (_ui_err == DRV_SUCCESS)
   {
@@ -167,7 +167,7 @@ PlusStatus vtkPlusAndorCam::CheckAndorSDKError(unsigned int _ui_err, const std::
 // Initialize Andor Camera ---------------------------------------------
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::InitializeAndorCam()
+PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 {
   //Initialize AndorSDK
   unsigned int result = Initialize("");
@@ -198,16 +198,16 @@ PlusStatus vtkPlusAndorCam::InitializeAndorCam()
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::InternalConnect()
+PlusStatus vtkPlusAndorCamera::InternalConnect()
 {
-  LOG_TRACE("vtkPlusAndorCam::InternalConnect");
+  LOG_TRACE("vtkPlusAndorCamera::InternalConnect");
   //LOG_DEBUG("AndorSDK version " << bmDLLVer() << ", USB probe DLL version " << usbDLLVer());
 
-  return this->InitializeAndorCam();
+  return this->InitializeAndorCamera();
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::InternalDisconnect()
+PlusStatus vtkPlusAndorCamera::InternalDisconnect()
 {
   LOG_DEBUG("Disconnecting from Andor");
 
@@ -269,13 +269,13 @@ PlusStatus vtkPlusAndorCam::InternalDisconnect()
 //
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::InternalUpdate()
+PlusStatus vtkPlusAndorCamera::InternalUpdate()
 {
   return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::CheckAndAdjustCameraTemperature(int targetTemp)
+PlusStatus vtkPlusAndorCamera::CheckAndAdjustCameraTemperature(int targetTemp)
 {
   int MinTemp, MaxTemp;
 
@@ -431,7 +431,7 @@ PlusStatus vtkPlusAndorCam::CheckAndAdjustCameraTemperature(int targetTemp)
 // Setup the Andor camera parameters ----------------------------------------------
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorShutter(int shutter)
+PlusStatus vtkPlusAndorCamera::SetAndorShutter(int shutter)
 {
   this->AndorShutter = shutter;
   unsigned int result = SetShutter(1, this->AndorShutter, 0, 0);
@@ -444,13 +444,13 @@ PlusStatus vtkPlusAndorCam::SetAndorShutter(int shutter)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorShutter()
+int vtkPlusAndorCamera::GetAndorShutter()
 {
   return this->AndorShutter;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorExposureTime(float exposureTime)
+PlusStatus vtkPlusAndorCamera::SetAndorExposureTime(float exposureTime)
 {
   this->AndorExposureTime = exposureTime;
 
@@ -464,13 +464,13 @@ PlusStatus vtkPlusAndorCam::SetAndorExposureTime(float exposureTime)
 }
 
 // ----------------------------------------------------------------------------
-float vtkPlusAndorCam::GetAndorExposureTime()
+float vtkPlusAndorCamera::GetAndorExposureTime()
 {
   return this->AndorExposureTime;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorPreAmpGain(int preAmpGain)
+PlusStatus vtkPlusAndorCamera::SetAndorPreAmpGain(int preAmpGain)
 {
   this->AndorPreAmpGain = preAmpGain;
 
@@ -484,13 +484,13 @@ PlusStatus vtkPlusAndorCam::SetAndorPreAmpGain(int preAmpGain)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorPreAmpGain()
+int vtkPlusAndorCamera::GetAndorPreAmpGain()
 {
   return this->AndorPreAmpGain;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorAcquisitionMode(int acquisitionMode)
+PlusStatus vtkPlusAndorCamera::SetAndorAcquisitionMode(int acquisitionMode)
 {
   this->AndorAcquisitionMode = acquisitionMode;
 
@@ -504,13 +504,13 @@ PlusStatus vtkPlusAndorCam::SetAndorAcquisitionMode(int acquisitionMode)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorAcquisitionMode()
+int vtkPlusAndorCamera::GetAndorAcquisitionMode()
 {
   return this->AndorAcquisitionMode;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorReadMode(int readMode)
+PlusStatus vtkPlusAndorCamera::SetAndorReadMode(int readMode)
 {
   this->AndorReadMode = readMode;
 
@@ -524,13 +524,13 @@ PlusStatus vtkPlusAndorCam::SetAndorReadMode(int readMode)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorReadMode()
+int vtkPlusAndorCamera::GetAndorReadMode()
 {
   return this->AndorReadMode;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorTriggerMode(int triggerMode)
+PlusStatus vtkPlusAndorCamera::SetAndorTriggerMode(int triggerMode)
 {
   this->AndorTriggerMode = triggerMode;
 
@@ -544,13 +544,13 @@ PlusStatus vtkPlusAndorCam::SetAndorTriggerMode(int triggerMode)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorTriggerMode()
+int vtkPlusAndorCamera::GetAndorTriggerMode()
 {
   return this->AndorTriggerMode;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorHbin(int hbin)
+PlusStatus vtkPlusAndorCamera::SetAndorHbin(int hbin)
 {
   this->AndorHbin = hbin;
 
@@ -558,13 +558,13 @@ PlusStatus vtkPlusAndorCam::SetAndorHbin(int hbin)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorHbin()
+int vtkPlusAndorCamera::GetAndorHbin()
 {
   return this->AndorHbin;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorVbin(int vbin)
+PlusStatus vtkPlusAndorCamera::SetAndorVbin(int vbin)
 {
   this->AndorVbin = vbin;
 
@@ -572,13 +572,13 @@ PlusStatus vtkPlusAndorCam::SetAndorVbin(int vbin)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorVbin()
+int vtkPlusAndorCamera::GetAndorVbin()
 {
   return this->AndorVbin;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorCoolTemperature(int coolTemp)
+PlusStatus vtkPlusAndorCamera::SetAndorCoolTemperature(int coolTemp)
 {
   this->AndorCoolTemperature = coolTemp;
 
@@ -586,13 +586,13 @@ PlusStatus vtkPlusAndorCam::SetAndorCoolTemperature(int coolTemp)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorCoolTemperature()
+int vtkPlusAndorCamera::GetAndorCoolTemperature()
 {
   return this->AndorCoolTemperature;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCam::SetAndorSafeTemperature(int safeTemp)
+PlusStatus vtkPlusAndorCamera::SetAndorSafeTemperature(int safeTemp)
 {
   this->AndorSafeTemperature = safeTemp;
 
@@ -600,7 +600,7 @@ PlusStatus vtkPlusAndorCam::SetAndorSafeTemperature(int safeTemp)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCam::GetAndorSafeTemperature()
+int vtkPlusAndorCamera::GetAndorSafeTemperature()
 {
   return this->AndorSafeTemperature;
 }

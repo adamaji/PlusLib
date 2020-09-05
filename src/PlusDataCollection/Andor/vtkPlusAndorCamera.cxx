@@ -77,13 +77,13 @@ PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigE
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::NotifyConfigured()
 {
-  if (this->OutputChannels.size() > 1)
+  if(this->OutputChannels.size() > 1)
   {
     LOG_WARNING("vtkPlusAndorCamera is expecting one output channel and there are "
                 << this->OutputChannels.size() << " channels. First output channel will be used.");
   }
 
-  if (this->OutputChannels.empty())
+  if(this->OutputChannels.empty())
   {
     LOG_ERROR("No output channels defined for vtkPlusIntersonVideoSource. Cannot proceed.");
     this->CorrectlyConfigured = false;
@@ -114,7 +114,7 @@ std::string vtkPlusAndorCamera::GetSdkVersion()
 // ------------------------------------------------------------------------
 // Protected member operators ---------------------------------------------
 
- //----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 vtkPlusAndorCamera::vtkPlusAndorCamera()
 {
   this->RequireImageOrientationInConfiguration = true;
@@ -122,7 +122,7 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
   // Initialize camera parameters ----------------------------------------
   this->AndorShutter                               = 0;
   this->AndorExposureTime                          = 1.0f; //seconds
-  this->AndorHSSpeed                               = { 0,1 };
+  this->AndorHSSpeed                               = { 0, 1 };
   this->AndorPreAmpGain                            = 0;
   this->AndorAcquisitionMode                       = 1; //single scan
   this->AndorReadMode                              = 4; // Image
@@ -143,7 +143,7 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
 // ----------------------------------------------------------------------------
 vtkPlusAndorCamera::~vtkPlusAndorCamera()
 {
-  if (!this->Connected)
+  if(!this->Connected)
   {
     this->Disconnect();
   }
@@ -152,7 +152,7 @@ vtkPlusAndorCamera::~vtkPlusAndorCamera()
 // Check for the error codes returned from AndorSdK ---------------------------
 PlusStatus vtkPlusAndorCamera::CheckAndorSDKError(unsigned int _ui_err, const std::string _cp_func)
 {
-  if (_ui_err == DRV_SUCCESS)
+  if(_ui_err == DRV_SUCCESS)
   {
     return PLUS_SUCCESS;
   }
@@ -172,7 +172,7 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   //Initialize AndorSDK
   unsigned int result = Initialize("");
 
-  if (CheckAndorSDKError(result, "Initialize Andor SDK") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(result, "Initialize Andor SDK") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
@@ -183,8 +183,10 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   // Use the min of the two as the safe temp.
   int MinTemp, MaxTemp;
   result = GetTemperatureRange(&MinTemp, &MaxTemp);
-  if (MaxTemp < this->AndorSafeTemperature)
+  if(MaxTemp < this->AndorSafeTemperature)
+  {
     this->AndorSafeTemperature = MaxTemp;
+  }
   LOG_INFO("The temperature range for the connected Andor Camera is: " << MinTemp << " and " << MaxTemp);
 
   //Check the temperature of the camera, and ajust it if needed.
@@ -212,39 +214,39 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
   LOG_DEBUG("Disconnecting from Andor");
 
   unsigned int andorResult;
-  
+
   int temperature;
   GetTemperature(&temperature);
-  
+
   // It is vital to raise the temperature to above 0 before closing
   // to reduce damage to the head. This routine simply blocks exiting
   // the program until the temp is above 0
-  if (temperature < 0)
+  if(temperature < 0)
   {
     LOG_INFO("Raising the Andor camera cooler temperature to above 0");
-    if (CheckAndAdjustCameraTemperature(this->AndorSafeTemperature) != PLUS_SUCCESS)
+    if(CheckAndAdjustCameraTemperature(this->AndorSafeTemperature) != PLUS_SUCCESS)
     {
       return PLUS_FAIL;
     }
   }
-  
+
   // Switch off the cooler
   andorResult = CoolerOFF();
-  if (CheckAndorSDKError(andorResult, "CoolerOff") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(andorResult, "CoolerOff") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
 
   // Free internal memory
   andorResult = FreeInternalMemory();
-  if (CheckAndorSDKError(andorResult, "FreeInternalMemory") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(andorResult, "FreeInternalMemory") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
 
   // Shut down the camera
   andorResult = ShutDown();
-  if (CheckAndorSDKError(andorResult, "ShutDown") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(andorResult, "ShutDown") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
@@ -281,12 +283,12 @@ PlusStatus vtkPlusAndorCamera::CheckAndAdjustCameraTemperature(int targetTemp)
 
   // check if temp is in valid range
   unsigned int  errorValue = GetTemperatureRange(&MinTemp, &MaxTemp);
-  if (CheckAndorSDKError(errorValue, "Get Temperature Range for Andor") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(errorValue, "Get Temperature Range for Andor") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
-  
-  if (targetTemp < MinTemp || targetTemp > MaxTemp)
+
+  if(targetTemp < MinTemp || targetTemp > MaxTemp)
   {
     LOG_ERROR("Requested temperature for Andor camera is out of range");
     return PLUS_FAIL;
@@ -294,25 +296,26 @@ PlusStatus vtkPlusAndorCamera::CheckAndAdjustCameraTemperature(int targetTemp)
 
   // if it is in range, switch on cooler and set temp
   errorValue = CoolerON();
-  if (CheckAndorSDKError(errorValue, "Turn Andor Camera Cooler on") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(errorValue, "Turn Andor Camera Cooler on") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
-  
+
   errorValue = SetTemperature(targetTemp);
 #ifdef _WIN32
   Sleep(10000);
 #else
   usleep(2000000);
 #endif
-  if (CheckAndorSDKError(errorValue, "Set Andor Cam temperature") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(errorValue, "Set Andor Cam temperature") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
 
   // Check the temperature
   errorValue = GetTemperature(&this->AndorCurrentTemperature);
-  switch (errorValue) {
+  switch(errorValue)
+  {
     case DRV_TEMPERATURE_STABILIZED:
       LOG_INFO("Temperature has stabilized at " << this->AndorCurrentTemperature << " (C)");
       break;
@@ -435,11 +438,11 @@ PlusStatus vtkPlusAndorCamera::SetAndorShutter(int shutter)
 {
   this->AndorShutter = shutter;
   unsigned int result = SetShutter(1, this->AndorShutter, 0, 0);
-  if (CheckAndorSDKError(result, "SetShutter") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(result, "SetShutter") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
-  
+
   return PLUS_SUCCESS;
 }
 
@@ -455,7 +458,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorExposureTime(float exposureTime)
   this->AndorExposureTime = exposureTime;
 
   unsigned int result = SetExposureTime(this->AndorExposureTime);
-  if (CheckAndorSDKError(result, "SetExposure") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(result, "SetExposure") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
@@ -475,7 +478,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorPreAmpGain(int preAmpGain)
   this->AndorPreAmpGain = preAmpGain;
 
   unsigned int result = SetPreAmpGain(this->AndorPreAmpGain);
-  if (CheckAndorSDKError(result, "SetPreAmpGain") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(result, "SetPreAmpGain") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
@@ -495,7 +498,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorAcquisitionMode(int acquisitionMode)
   this->AndorAcquisitionMode = acquisitionMode;
 
   unsigned int result = SetAcquisitionMode(this->AndorAcquisitionMode);
-  if (CheckAndorSDKError(result, "SetAcquisitionMode") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(result, "SetAcquisitionMode") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
@@ -515,7 +518,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorReadMode(int readMode)
   this->AndorReadMode = readMode;
 
   unsigned int result = SetReadMode(this->AndorReadMode);
-  if (CheckAndorSDKError(result, "SetReadMode") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(result, "SetReadMode") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }
@@ -535,7 +538,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorTriggerMode(int triggerMode)
   this->AndorTriggerMode = triggerMode;
 
   unsigned int result = SetTriggerMode(this->AndorTriggerMode);
-  if (CheckAndorSDKError(result, "SetTriggerMode") != PLUS_SUCCESS)
+  if(CheckAndorSDKError(result, "SetTriggerMode") != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
   }

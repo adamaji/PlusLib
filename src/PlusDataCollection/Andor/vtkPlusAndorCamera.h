@@ -28,7 +28,10 @@ public:
   virtual void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
 
   /*! Specify the device connected to this class */
-  virtual bool IsTracker() const { return false; }
+  virtual bool IsTracker() const
+  {
+    return false;
+  }
 
   /*! Read configuration from xml data */
   virtual PlusStatus ReadConfiguration(vtkXMLDataElement* config);

@@ -40,12 +40,6 @@
 
 //----------------------------------------------------------------------------
 
-enum DisplayMode
-{
-  SHOW_IMAGE,
-  SHOW_PLOT
-};
-
 //---------------------------------------------------------------------------------
 
 class vtkMyCallback : public vtkCommand
@@ -135,9 +129,6 @@ int main(int argc, char* argv[])
 
 		andorCamDevice->ReadConfiguration(configRootElement);
 	}
-  
-	
-	DisplayMode displayMode = SHOW_IMAGE; 
 
 	if ( andorCamDevice->Connect() != PLUS_SUCCESS )
 	{

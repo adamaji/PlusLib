@@ -105,6 +105,9 @@ public:
   /*! Get the shutter for the camera */
   int GetAndorSafeTemperature();
 
+  /*! Get the shutter for the camera */
+  float GetAndorCurrentTemperature();
+
   vtkPlusAndorCamera(const vtkPlusAndorCamera&) = delete;
   void operator=(const vtkPlusAndorCamera&) = delete;
 
@@ -148,33 +151,30 @@ protected:
   /*! Check for errors in Andor SDK */
   PlusStatus CheckAndorSDKError(unsigned int _ui_err, const std::string _cp_func);
 
-  /*! Check and adjust the camera temperature */
-  PlusStatus CheckAndAdjustCameraTemperature(int targetTemp);
-
   // TODO: Need to handle differet cases for read/acquisiton modes?
   // TODO: Handle temperatures correctly.
 
-  int                   AndorShutter;
-  float                 AndorExposureTime;  // seconds
-  std::array<int, 2>    AndorHSSpeed;
-  int                   AndorPreAmpGain;
+  int                AndorShutter;
+  float              AndorExposureTime;  // seconds
+  std::array<int, 2> AndorHSSpeed;
+  int                AndorPreAmpGain;
 
   /*! From AndorSDK:=> 1: Single Scan   2: Accumulate   3: Kinetics   4: Fast Kinetics   5: Run till abort  */
-  int                   AndorAcquisitionMode;
+  int AndorAcquisitionMode;
 
   /*! From AndorSDK:=> 0: Full Vertical Binning   1: Multi-Track   2: Random-Track   3: Single-Track   4: Image */
-  int                   AndorReadMode;
+  int AndorReadMode;
 
   /*! From AndorSDK:=> 0. Internal   1. External  6. External Start  7. External Exposure(Bulb)  9. External FVB EM(only valid for EM Newton models in FVB mode) 10. Software Trigger  12. External Charge Shifting */
-  int                   AndorTriggerMode;
+  int AndorTriggerMode;
 
-  int                   AndorHbin;
-  int                   AndorVbin;
+  int AndorHbin;
+  int AndorVbin;
 
   /*! Temperatures are in °C (degrees Celsius) */
-  int                   AndorCoolTemperature;
-  int                   AndorSafeTemperature;
-  int                   AndorCurrentTemperature;
+  int   AndorCoolTemperature;
+  int   AndorSafeTemperature;
+  float AndorCurrentTemperature;
 };
 
 #endif

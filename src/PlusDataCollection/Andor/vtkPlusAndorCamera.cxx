@@ -30,6 +30,7 @@ void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Vbin: " << AndorVbin << std::endl;
   os << indent << "CoolTemperature: " << AndorCoolTemperature << std::endl;
   os << indent << "SafeTemperature: " << AndorSafeTemperature << std::endl;
+  os << indent << "CurrentTemperature: " << AndorCurrentTemperature << std::endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -131,7 +132,7 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
   this->AndorVbin                                  = 1; //Vertical binning
   this->AndorCoolTemperature                       = -50;
   this->AndorSafeTemperature                       = 5;
-  this->AndorCurrentTemperature                    = 0;
+  this->AndorCurrentTemperature                    = 0.0;
 
   // No callback function provided by the device,
   // so the data capture thread will be used
@@ -176,8 +177,7 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   {
     return PLUS_FAIL;
   }
-
-  LOG_INFO("yowzaaa2, was able to initialize Andor SDK!");
+  LOG_DEBUG("Andor SDK initialized.");
 
   // Check the safe temperature, and the maximum allowable temperature on the camera.
   // Use the min of the two as the safe temp.
@@ -189,12 +189,24 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   }
   LOG_INFO("The temperature range for the connected Andor Camera is: " << MinTemp << " and " << MaxTemp);
 
-  //Check the temperature of the camera, and ajust it if needed.
-  CheckAndAdjustCameraTemperature(this->AndorCoolTemperature);
+  if(this->AndorCoolTemperature < MinTemp || this->AndorCoolTemperature > MaxTemp)
+  {
+    LOG_ERROR("Requested temperature for Andor camera is out of range");
+    return PLUS_FAIL;
+  }
 
-  // Setup the camera
+  result = CoolerON();
+  if(CheckAndorSDKError(result, "Turn Andor Camera Cooler on") != PLUS_SUCCESS)
+  {
+    return PLUS_FAIL;
+  }
 
-  // Prepare acquisition
+  result = SetTemperature(this->AndorCoolTemperature);
+  if(CheckAndorSDKError(result, "Set Andor Camera cool temperature") != PLUS_SUCCESS)
+  {
+    return PLUS_FAIL;
+  }
+  GetAndorCurrentTemperature(); // logs the status and temperature
 
   return PLUS_SUCCESS;
 }
@@ -205,7 +217,16 @@ PlusStatus vtkPlusAndorCamera::InternalConnect()
   LOG_TRACE("vtkPlusAndorCamera::InternalConnect");
   //LOG_DEBUG("AndorSDK version " << bmDLLVer() << ", USB probe DLL version " << usbDLLVer());
 
-  return this->InitializeAndorCamera();
+  if(this->InitializeAndorCamera() != PLUS_SUCCESS)
+  {
+    return PLUS_FAIL;
+  }
+
+  // Setup the camera
+
+  // Prepare acquisition
+
+  return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
@@ -276,96 +297,6 @@ PlusStatus vtkPlusAndorCamera::InternalUpdate()
   return PLUS_SUCCESS;
 }
 
-// ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::CheckAndAdjustCameraTemperature(int targetTemp)
-{
-  int MinTemp, MaxTemp;
-
-  // check if temp is in valid range
-  unsigned int  errorValue = GetTemperatureRange(&MinTemp, &MaxTemp);
-  if(CheckAndorSDKError(errorValue, "Get Temperature Range for Andor") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
-  if(targetTemp < MinTemp || targetTemp > MaxTemp)
-  {
-    LOG_ERROR("Requested temperature for Andor camera is out of range");
-    return PLUS_FAIL;
-  }
-
-  // if it is in range, switch on cooler and set temp
-  errorValue = CoolerON();
-  if(CheckAndorSDKError(errorValue, "Turn Andor Camera Cooler on") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
-  errorValue = SetTemperature(targetTemp);
-#ifdef _WIN32
-  Sleep(10000);
-#else
-  usleep(2000000);
-#endif
-  if(CheckAndorSDKError(errorValue, "Set Andor Cam temperature") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
-  // Check the temperature
-  errorValue = GetTemperature(&this->AndorCurrentTemperature);
-  switch(errorValue)
-  {
-    case DRV_TEMPERATURE_STABILIZED:
-      LOG_INFO("Temperature has stabilized at " << this->AndorCurrentTemperature << " (C)");
-      break;
-    case DRV_TEMPERATURE_NOT_REACHED:
-      LOG_INFO("Current temperature is " << this->AndorCurrentTemperature << " (C)");
-      break;
-    default:
-      LOG_INFO("Temperature control is disabled " << this->AndorCurrentTemperature);
-      break;
-  }
-
-  return PLUS_SUCCESS;
-}
-
-//
-//// ----------------------------------------------------------------------------
-//PlusStatus vtkPlusCapistranoVideoSource::FreezeDevice(bool freeze)
-//{
-//  RETURN_WITH_FAIL_IF(this->Internal->ProbeHandle == NULL,
-//                      "vtkPlusIntersonVideoSource::FreezeDevice failed: device not connected");
-//  RETURN_WITH_FAIL_IF(!usbHardwareDetected(),
-//                      "Freeze failed, no hardware is detected");
-//
-//  if (this->Frozen == freeze) //already in desired mode
-//  {
-//    return PLUS_SUCCESS;
-//  }
-//
-//  this->Frozen = freeze;
-//  if (this->Frozen)
-//  {
-//    usbProbe(STOP);
-//  }
-//  else
-//  {
-//    usbClearCineBuffers();
-//    this->FrameNumber = 0;
-//    RETURN_WITH_FAIL_IF(this->UpdateUSParameters() == PLUS_FAIL,
-//                        "Failed to update US parameters");
-//    usbProbe(RUN);
-//  }
-//
-//  return PLUS_SUCCESS;
-//}
-//
-//// ----------------------------------------------------------------------------
-//bool vtkPlusCapistranoVideoSource::IsFrozen()
-//{
-//  return Frozen;
-//}
 //
 //// ----------------------------------------------------------------------------
 //PlusStatus vtkPlusCapistranoVideoSource::WaitForFrame()
@@ -606,4 +537,24 @@ PlusStatus vtkPlusAndorCamera::SetAndorSafeTemperature(int safeTemp)
 int vtkPlusAndorCamera::GetAndorSafeTemperature()
 {
   return this->AndorSafeTemperature;
+}
+
+int vtkPlusAndorCamera::GetAndorCurrentTemperature()
+{
+  // Check the temperature
+  unsigned errorValue = GetTemperatureF(&this->AndorCurrentTemperature);
+  switch(errorValue)
+  {
+    case DRV_TEMPERATURE_STABILIZED:
+      LOG_INFO("Temperature has stabilized at " << this->AndorCurrentTemperature << " °C");
+      break;
+    case DRV_TEMPERATURE_NOT_REACHED:
+      LOG_INFO("Cooling down, current temperature is " << this->AndorCurrentTemperature << " °C");
+      break;
+    default:
+      LOG_INFO("Current temperature is " << this->AndorCurrentTemperature << " °C");
+      break;
+  }
+
+  return this->AndorCurrentTemperature;
 }

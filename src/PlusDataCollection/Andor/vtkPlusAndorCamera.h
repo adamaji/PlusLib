@@ -116,12 +116,6 @@ public:
   /*! Get the current temperature of the camera in degrees celsius. */
   float GetCurrentTemperature();
 
-  /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
-  void WaitForCooldown();
-
-  /*! Acquire a single frame using current parameters. Data is put in the frameBuffer ivar. */
-  PlusStatus AcquireFrame();
-
   vtkPlusAndorCamera(const vtkPlusAndorCamera&) = delete;
   void operator=(const vtkPlusAndorCamera&) = delete;
 
@@ -139,28 +133,20 @@ protected:
   virtual PlusStatus InternalDisconnect();
 
   /*! Device-specific recording start */
-  //virtual PlusStatus InternalStartRecording();
+  PlusStatus InternalStartRecording() override;
 
   /*! Device-specific recording stop */
-  //virtual PlusStatus InternalStopRecording();
+  PlusStatus InternalStopRecording() override;
 
   /*! Initialize vtkPlusAndorCamera */
   PlusStatus InitializeAndorCamera();
 
-  /*! The internal function which actually does the grab. */
-  PlusStatus InternalUpdate();
+  /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
+  void WaitForCooldown();
 
-  /*! Wait US Data from US device  */
-  //PlusStatus WaitForFrame();
+  /*! Acquire a single frame using current parameters. Data is put in the frameBuffer ivar. */
+  PlusStatus AcquireFrame();
 
-  ///* Calculate US Image Display */
-  //PlusStatus CalculateDisplay();
-
-  ///* Calculate US Image Display with a given B-Mode view option */
-  //PlusStatus CalculateDisplay(unsigned int option);
-
-  ///*! Get probe name from the device */
-  //PlusStatus GetProbeNameDevice(std::string& probeName);
 
   int                AndorShutter = 0;
   float              AndorExposureTime = 1.0; // seconds
@@ -178,14 +164,13 @@ protected:
   /*! From AndorSDK:=> 0. Internal   1. External  6. External Start  7. External Exposure(Bulb)  9. External FVB EM(only valid for EM Newton models in FVB mode) 10. Software Trigger  12. External Charge Shifting */
   int AndorTriggerMode = 0;
 
-  int AndorHbin = 1;
-  int AndorVbin = 1;
-
   /*! Temperatures are in °C (degrees Celsius) */
   int   AndorCoolTemperature = -50;
   int   AndorSafeTemperature = 5;
   float AndorCurrentTemperature = 0.123456789; // easy to spot as uninitialized
 
+  int AndorHbin = 1;
+  int AndorVbin = 1;
   int xSize = 1024;
   int ySize = 1024;
   std::vector<uint16_t> frameBuffer;

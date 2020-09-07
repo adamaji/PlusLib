@@ -129,8 +129,8 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
   // No callback function provided by the device,
   // so the data capture thread will be used
   // to poll the hardware and add new items to the buffer
-  this->StartThreadForInternalUpdates          = true;
-  this->AcquisitionRate                        = 1;
+  this->StartThreadForInternalUpdates = true;
+  this->AcquisitionRate = 1;
 }
 
 // ----------------------------------------------------------------------------
@@ -243,26 +243,68 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
 }
 
 
-//// ----------------------------------------------------------------------------
-//PlusStatus vtkPlusCapistranoVideoSource::InternalStartRecording()
-//{
-//  FreezeDevice(false);
-//  return PLUS_SUCCESS;
-//}
-//
-//// ----------------------------------------------------------------------------
-//PlusStatus vtkPlusCapistranoVideoSource::InternalStopRecording()
-//{
-//  FreezeDevice(true);
-//  return PLUS_SUCCESS;
-//}
-//
-
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::InternalUpdate()
+PlusStatus vtkPlusAndorCamera::InternalStartRecording()
 {
   return PLUS_SUCCESS;
 }
+
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::InternalStopRecording()
+{
+  return PLUS_SUCCESS;
+}
+
+
+// ----------------------------------------------------------------------------
+float vtkPlusAndorCamera::GetCurrentTemperature()
+{
+  unsigned result = GetTemperatureF(&this->AndorCurrentTemperature);
+  switch(result)
+  {
+    case DRV_TEMPERATURE_STABILIZED:
+      LOG_INFO("Temperature has stabilized at " << this->AndorCurrentTemperature << " °C");
+      break;
+    case DRV_TEMPERATURE_NOT_REACHED:
+      LOG_INFO("Cooling down, current temperature is " << this->AndorCurrentTemperature << " °C");
+      break;
+    default:
+      LOG_INFO("Current temperature is " << this->AndorCurrentTemperature << " °C");
+      break;
+  }
+
+  return this->AndorCurrentTemperature;
+}
+
+// ----------------------------------------------------------------------------
+void vtkPlusAndorCamera::WaitForCooldown()
+{
+  while(GetTemperatureF(&this->AndorCurrentTemperature) != DRV_TEMPERATURE_STABILIZED)
+  {
+    igtl::Sleep(1000); // wait a bit
+  }
+}
+
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::AcquireFrame()
+{
+  unsigned result = StartAcquisition();
+  AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")
+  result = WaitForAcquisition();
+  AndorCheckErrorValueAndFailIfNeeded(result, "WaitForAcquisition")
+
+  // iKon-M 934 has 16-bit digitization
+  // https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-ikon-m-934-specifications.pdf
+  // so we choose 16-bit unsigned
+  // GetMostRecentImage() is 32 bit signed variant
+  result = GetMostRecentImage16(&frameBuffer[0], xSize * ySize / (AndorHbin * AndorVbin));
+  AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
+
+  return PLUS_SUCCESS;
+}
+
+
+
 
 // Setup the Andor camera parameters ----------------------------------------------
 
@@ -415,48 +457,4 @@ PlusStatus vtkPlusAndorCamera::SetSafeTemperature(int safeTemp)
 int vtkPlusAndorCamera::GetSafeTemperature()
 {
   return this->AndorSafeTemperature;
-}
-
-float vtkPlusAndorCamera::GetCurrentTemperature()
-{
-  unsigned result = GetTemperatureF(&this->AndorCurrentTemperature);
-  switch(result)
-  {
-    case DRV_TEMPERATURE_STABILIZED:
-      LOG_INFO("Temperature has stabilized at " << this->AndorCurrentTemperature << " °C");
-      break;
-    case DRV_TEMPERATURE_NOT_REACHED:
-      LOG_INFO("Cooling down, current temperature is " << this->AndorCurrentTemperature << " °C");
-      break;
-    default:
-      LOG_INFO("Current temperature is " << this->AndorCurrentTemperature << " °C");
-      break;
-  }
-
-  return this->AndorCurrentTemperature;
-}
-
-void vtkPlusAndorCamera::WaitForCooldown()
-{
-  while(GetTemperatureF(&this->AndorCurrentTemperature) != DRV_TEMPERATURE_STABILIZED)
-  {
-    igtl::Sleep(1000); // wait a bit
-  }
-}
-
-PlusStatus vtkPlusAndorCamera::AcquireFrame()
-{
-  unsigned result = StartAcquisition();
-  AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")
-  result = WaitForAcquisition();
-  AndorCheckErrorValueAndFailIfNeeded(result, "WaitForAcquisition")
-
-  // iKon-M 934 has 16-bit digitization
-  // https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-ikon-m-934-specifications.pdf
-  // so we choose 16-bit unsigned
-  // GetMostRecentImage() is 32 bit signed variant
-  result = GetMostRecentImage16(&frameBuffer[0], xSize * ySize / (AndorHbin * AndorVbin));
-  AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
-
-  return PLUS_SUCCESS;
 }

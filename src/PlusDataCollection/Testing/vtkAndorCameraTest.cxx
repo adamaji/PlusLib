@@ -135,11 +135,11 @@ int main(int argc, char* argv[])
 
   if(andorCamDevice->Connect() != PLUS_SUCCESS)
   {
-    LOG_ERROR("Unable to connect to Capistrano Probe");
+    LOG_ERROR("Unable to connect to Andor camera");
     exit(EXIT_FAILURE);
   }
 
-  LOG_INFO("SDK version: " << andorCamDevice->GetSdkVersion());
+  LOG_INFO(andorCamDevice->GetSdkVersion());
 
   if(printParams)
   {

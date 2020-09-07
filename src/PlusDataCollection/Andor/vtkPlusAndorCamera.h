@@ -45,67 +45,77 @@ public:
   /*! Get the version of SDK */
   virtual std::string GetSdkVersion();
 
-  /*! Set the shutter for the camera */
+  /*! Shutter mode:
+   * 0 Fully Auto
+   * 1 Permanently Open
+   * 2 Permanently Closed
+   * 4 Open for FVB series
+   * 5 Open for any series
+   * 
+   * For an external shutter: Output TTL high signal to open shutter.
+   */
   PlusStatus SetAndorShutter(int shutter);
-
-  /*! Get the shutter for the camera */
   int GetAndorShutter();
 
-  /*! TODO: update docstrings */
+  /*! Frame exposure time, seconds. Sets to the nearest valid value not less than the given value. */
   PlusStatus SetAndorExposureTime(float exposureTime);
-
-  /*! Get the shutter for the camera */
   float GetAndorExposureTime();
 
-  /*! Set the shutter for the camera */
+  /*! Index of the pre-amp gain, not the actual value. */
   PlusStatus SetAndorPreAmpGain(int preAmptGain);
-
-  /*! Get the shutter for the camera */
   int GetAndorPreAmpGain();
 
-  /*! Set the shutter for the camera */
-  PlusStatus SetAndorAcquisitionMode(int acquisitionMode);
+  // TODO: Need to handle differet cases for read/acquisiton modes?
 
-  /*! Get the shutter for the camera */
+  /*! Acquisition mode. Valid values:
+   * 1 Single Scan
+   * 2 Accumulate
+   * 3 Kinetics
+   * 4 Fast Kinetics
+   * 5 Run till abort
+   */
+  PlusStatus SetAndorAcquisitionMode(int acquisitionMode);
   int GetAndorAcquisitionMode();
 
-  /*! Set the shutter for the camera */
+  /*! Readout mode. Valid values:
+   * 0 Full Vertical Binning
+   * 1 Multi-Track
+   * 2 Random-Track
+   * 3 Single-Track
+   * 4 Image
+   */
   PlusStatus SetAndorReadMode(int setReadMode);
-
-  /*! Get the shutter for the camera */
   int GetAndorReadMode();
 
-  /*! Set the shutter for the camera */
+  /*! Trigger mode. Valid values:
+   * 0. Internal
+   * 1. External
+   * 6. External Start
+   * 7. External Exposure (Bulb)
+   * 9. External FVB EM (only valid for EM Newton models in FVB mode)
+   * 10. Software Trigger
+   * 12. External Charge Shifting
+   */
   PlusStatus SetAndorTriggerMode(int triggerMode);
-
-  /*! Get the shutter for the camera */
   int GetAndorTriggerMode();
 
-  /*! Set the shutter for the camera */
+  /*! Horizontal binning */
   PlusStatus SetAndorHbin(int hbin);
-
-  /*! Get the shutter for the camera */
   int GetAndorHbin();
 
-  /*! Set the shutter for the camera */
+  /*! Vertical binning */
   PlusStatus SetAndorVbin(int vbin);
-
-  /*! Get the shutter for the camera */
   int GetAndorVbin();
 
-  /*! Set the shutter for the camera */
+  /*! Normal operating temperature (degrees celsius). */
   PlusStatus SetAndorCoolTemperature(int coolTemp);
-
-  /*! Get the shutter for the camera */
   int GetAndorCoolTemperature();
 
-  /*! Set the shutter for the camera */
+  /*! Lowest temperature at which it is safe to shut down the camera. */
   PlusStatus SetAndorSafeTemperature(int safeTemp);
-
-  /*! Get the shutter for the camera */
   int GetAndorSafeTemperature();
 
-  /*! Get the shutter for the camera */
+  /*! Get the current temperature of the camera in degrees celsius. */
   float GetAndorCurrentTemperature();
 
   vtkPlusAndorCamera(const vtkPlusAndorCamera&) = delete;
@@ -147,12 +157,6 @@ protected:
 
   ///*! Get probe name from the device */
   //PlusStatus GetProbeNameDevice(std::string& probeName);
-
-  /*! Check for errors in Andor SDK */
-  PlusStatus CheckAndorSDKError(unsigned int _ui_err, const std::string _cp_func);
-
-  // TODO: Need to handle differet cases for read/acquisiton modes?
-  // TODO: Handle temperatures correctly.
 
   int                AndorShutter;
   float              AndorExposureTime;  // seconds

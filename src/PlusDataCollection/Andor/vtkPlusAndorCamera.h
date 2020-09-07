@@ -51,21 +51,19 @@ public:
    * 2 Permanently Closed
    * 4 Open for FVB series
    * 5 Open for any series
-   * 
+   *
    * For an external shutter: Output TTL high signal to open shutter.
    */
-  PlusStatus SetAndorShutter(int shutter);
-  int GetAndorShutter();
+  PlusStatus SetShutter(int shutter);
+  int GetShutter();
 
   /*! Frame exposure time, seconds. Sets to the nearest valid value not less than the given value. */
-  PlusStatus SetAndorExposureTime(float exposureTime);
-  float GetAndorExposureTime();
+  PlusStatus SetExposureTime(float exposureTime);
+  float GetExposureTime();
 
   /*! Index of the pre-amp gain, not the actual value. */
-  PlusStatus SetAndorPreAmpGain(int preAmptGain);
-  int GetAndorPreAmpGain();
-
-  // TODO: Need to handle differet cases for read/acquisiton modes?
+  PlusStatus SetPreAmpGain(int preAmptGain);
+  int GetPreAmpGain();
 
   /*! Acquisition mode. Valid values:
    * 1 Single Scan
@@ -74,8 +72,8 @@ public:
    * 4 Fast Kinetics
    * 5 Run till abort
    */
-  PlusStatus SetAndorAcquisitionMode(int acquisitionMode);
-  int GetAndorAcquisitionMode();
+  PlusStatus SetAcquisitionMode(int acquisitionMode);
+  int GetAcquisitionMode();
 
   /*! Readout mode. Valid values:
    * 0 Full Vertical Binning
@@ -84,8 +82,8 @@ public:
    * 3 Single-Track
    * 4 Image
    */
-  PlusStatus SetAndorReadMode(int setReadMode);
-  int GetAndorReadMode();
+  PlusStatus SetReadMode(int setReadMode);
+  int GetReadMode();
 
   /*! Trigger mode. Valid values:
    * 0. Internal
@@ -96,27 +94,27 @@ public:
    * 10. Software Trigger
    * 12. External Charge Shifting
    */
-  PlusStatus SetAndorTriggerMode(int triggerMode);
-  int GetAndorTriggerMode();
+  PlusStatus SetTriggerMode(int triggerMode);
+  int GetTriggerMode();
 
   /*! Horizontal binning */
-  PlusStatus SetAndorHbin(int hbin);
-  int GetAndorHbin();
+  PlusStatus SetHbin(int hbin);
+  int GetHbin();
 
   /*! Vertical binning */
-  PlusStatus SetAndorVbin(int vbin);
-  int GetAndorVbin();
+  PlusStatus SetVbin(int vbin);
+  int GetVbin();
 
   /*! Normal operating temperature (degrees celsius). */
-  PlusStatus SetAndorCoolTemperature(int coolTemp);
-  int GetAndorCoolTemperature();
+  PlusStatus SetCoolTemperature(int coolTemp);
+  int GetCoolTemperature();
 
   /*! Lowest temperature at which it is safe to shut down the camera. */
-  PlusStatus SetAndorSafeTemperature(int safeTemp);
-  int GetAndorSafeTemperature();
+  PlusStatus SetSafeTemperature(int safeTemp);
+  int GetSafeTemperature();
 
   /*! Get the current temperature of the camera in degrees celsius. */
-  float GetAndorCurrentTemperature();
+  float GetCurrentTemperature();
 
   /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
   void WaitForCooldown();
@@ -164,30 +162,32 @@ protected:
   ///*! Get probe name from the device */
   //PlusStatus GetProbeNameDevice(std::string& probeName);
 
-  int                AndorShutter;
-  float              AndorExposureTime;  // seconds
-  std::array<int, 2> AndorHSSpeed;
-  int                AndorPreAmpGain;
+  int                AndorShutter = 0;
+  float              AndorExposureTime = 1.0; // seconds
+  std::array<int, 2> AndorHSSpeed = { 0, 1 };
+  int                AndorPreAmpGain = 0;
+
+  // TODO: Need to handle differet cases for read/acquisiton modes?
 
   /*! From AndorSDK:=> 1: Single Scan   2: Accumulate   3: Kinetics   4: Fast Kinetics   5: Run till abort  */
-  int AndorAcquisitionMode;
+  int AndorAcquisitionMode = 1;
 
   /*! From AndorSDK:=> 0: Full Vertical Binning   1: Multi-Track   2: Random-Track   3: Single-Track   4: Image */
-  int AndorReadMode;
+  int AndorReadMode = 4;
 
   /*! From AndorSDK:=> 0. Internal   1. External  6. External Start  7. External Exposure(Bulb)  9. External FVB EM(only valid for EM Newton models in FVB mode) 10. Software Trigger  12. External Charge Shifting */
-  int AndorTriggerMode;
+  int AndorTriggerMode = 0;
 
-  int AndorHbin;
-  int AndorVbin;
+  int AndorHbin = 1;
+  int AndorVbin = 1;
 
   /*! Temperatures are in °C (degrees Celsius) */
-  int   AndorCoolTemperature;
-  int   AndorSafeTemperature;
-  float AndorCurrentTemperature;
+  int   AndorCoolTemperature = -50;
+  int   AndorSafeTemperature = 5;
+  float AndorCurrentTemperature = 0.123456789; // easy to spot as uninitialized
 
-  int xSize;
-  int ySize;
+  int xSize = 1024;
+  int ySize = 1024;
   std::vector<uint16_t> frameBuffer;
 };
 

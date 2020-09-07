@@ -47,16 +47,16 @@ PlusStatus vtkPlusAndorCamera::ReadConfiguration(vtkXMLDataElement* rootConfigEl
 
   // Load the camera properties parameters -----------------------------------------------
 
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorShutter, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(float, AndorExposureTime, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorPreAmpGain, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorAcquisitionMode, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorReadMode, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorTriggerMode, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorHbin, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorVbin, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorCoolTemperature, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AndorSafeTemperature, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, Shutter, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(float, ExposureTime, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, PreAmpGain, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AcquisitionMode, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, ReadMode, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, TriggerMode, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, Hbin, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, Vbin, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, CoolTemperature, deviceConfig);
+  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, SafeTemperature, deviceConfig);
 
   return PLUS_SUCCESS;
 }
@@ -126,20 +126,6 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
 {
   this->RequireImageOrientationInConfiguration = true;
 
-  // Initialize camera parameters ----------------------------------------
-  this->AndorShutter                               = 0;
-  this->AndorExposureTime                          = 1.0f; //seconds
-  this->AndorHSSpeed                               = { 0, 1 };
-  this->AndorPreAmpGain                            = 0;
-  this->AndorAcquisitionMode                       = 1; //single scan
-  this->AndorReadMode                              = 4; // Image
-  this->AndorTriggerMode                           = 0; // Internal
-  this->AndorHbin                                  = 1; //Horizontal binning
-  this->AndorVbin                                  = 1; //Vertical binning
-  this->AndorCoolTemperature                       = -50;
-  this->AndorSafeTemperature                       = 5;
-  this->AndorCurrentTemperature                    = 0.123456789; // easy to spot as uninitialized
-
   // No callback function provided by the device,
   // so the data capture thread will be used
   // to poll the hardware and add new items to the buffer
@@ -185,11 +171,11 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   result = SetTemperature(this->AndorCoolTemperature);
   AndorCheckErrorValueAndFailIfNeeded(result, "Set Andor Camera cool temperature")
 
-  GetAndorCurrentTemperature(); // logs the status and temperature
+  GetCurrentTemperature(); // logs the status and temperature
 
   result = GetDetector(&xSize, &ySize);
   AndorCheckErrorValueAndFailIfNeeded(result, "GetDetectorSize")
-  frameBuffer.resize(xSize * ySize);
+  frameBuffer.resize(xSize * ySize / (AndorHbin*AndorVbin));
 
   return PLUS_SUCCESS;
 }
@@ -204,16 +190,16 @@ PlusStatus vtkPlusAndorCamera::InternalConnect()
   }
 
   // Setup the camera
-  this->SetAndorShutter(this->AndorShutter);
-  this->SetAndorExposureTime(this->AndorExposureTime);
-  this->SetAndorPreAmpGain(this->AndorPreAmpGain);
-  this->SetAndorAcquisitionMode(this->AndorAcquisitionMode);
-  this->SetAndorReadMode(this->AndorReadMode);
-  this->SetAndorTriggerMode(this->AndorTriggerMode);
-  this->SetAndorHbin(this->AndorHbin);
-  this->SetAndorVbin(this->AndorVbin);
-  this->SetAndorCoolTemperature(this->AndorCoolTemperature);
-  this->SetAndorSafeTemperature(this->AndorSafeTemperature);
+  this->SetShutter(this->AndorShutter);
+  this->SetExposureTime(this->AndorExposureTime);
+  this->SetPreAmpGain(this->AndorPreAmpGain);
+  this->SetAcquisitionMode(this->AndorAcquisitionMode);
+  this->SetReadMode(this->AndorReadMode);
+  this->SetTriggerMode(this->AndorTriggerMode);
+  this->SetHbin(this->AndorHbin);
+  this->SetVbin(this->AndorVbin);
+  this->SetCoolTemperature(this->AndorCoolTemperature);
+  this->SetSafeTemperature(this->AndorSafeTemperature);
 
   // Prepare acquisition
 
@@ -231,7 +217,7 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
 
   if(status)
   {
-    GetAndorCurrentTemperature(); // updates this->AndorCurrentTemperature
+    GetCurrentTemperature(); // updates this->AndorCurrentTemperature
     if(this->AndorCurrentTemperature < this->AndorSafeTemperature)
     {
       LOG_INFO("Temperature yet not at a safe point, turning the Cooler Off");
@@ -241,7 +227,7 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
       while(this->AndorCurrentTemperature < this->AndorSafeTemperature)
       {
         igtl::Sleep(5000); // wait a bit
-        GetAndorCurrentTemperature(); // logs the status and temperature
+        GetCurrentTemperature(); // logs the status and temperature
       }
     }
   }
@@ -281,102 +267,102 @@ PlusStatus vtkPlusAndorCamera::InternalUpdate()
 // Setup the Andor camera parameters ----------------------------------------------
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorShutter(int shutter)
+PlusStatus vtkPlusAndorCamera::SetShutter(int shutter)
 {
   this->AndorShutter = shutter;
-  unsigned int result = SetShutter(1, this->AndorShutter, 0, 0);
+  unsigned int result = ::SetShutter(1, this->AndorShutter, 0, 0);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetShutter")
   return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorShutter()
+int vtkPlusAndorCamera::GetShutter()
 {
   return this->AndorShutter;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorExposureTime(float exposureTime)
+PlusStatus vtkPlusAndorCamera::SetExposureTime(float exposureTime)
 {
   this->AndorExposureTime = exposureTime;
 
-  unsigned int result = SetExposureTime(this->AndorExposureTime);
+  unsigned int result = ::SetExposureTime(this->AndorExposureTime);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetExposureTime")
   return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
-float vtkPlusAndorCamera::GetAndorExposureTime()
+float vtkPlusAndorCamera::GetExposureTime()
 {
   return this->AndorExposureTime;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorPreAmpGain(int preAmpGain)
+PlusStatus vtkPlusAndorCamera::SetPreAmpGain(int preAmpGain)
 {
   this->AndorPreAmpGain = preAmpGain;
 
-  unsigned int result = SetPreAmpGain(this->AndorPreAmpGain);
+  unsigned int result = ::SetPreAmpGain(this->AndorPreAmpGain);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetPreAmpGain")
   return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorPreAmpGain()
+int vtkPlusAndorCamera::GetPreAmpGain()
 {
   return this->AndorPreAmpGain;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorAcquisitionMode(int acquisitionMode)
+PlusStatus vtkPlusAndorCamera::SetAcquisitionMode(int acquisitionMode)
 {
   this->AndorAcquisitionMode = acquisitionMode;
 
-  unsigned int result = SetAcquisitionMode(this->AndorAcquisitionMode);
+  unsigned int result = ::SetAcquisitionMode(this->AndorAcquisitionMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetAcquisitionMode")
   return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorAcquisitionMode()
+int vtkPlusAndorCamera::GetAcquisitionMode()
 {
   return this->AndorAcquisitionMode;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorReadMode(int readMode)
+PlusStatus vtkPlusAndorCamera::SetReadMode(int readMode)
 {
   this->AndorReadMode = readMode;
 
-  unsigned int result = SetReadMode(this->AndorReadMode);
+  unsigned int result = ::SetReadMode(this->AndorReadMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetReadMode")
   return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorReadMode()
+int vtkPlusAndorCamera::GetReadMode()
 {
   return this->AndorReadMode;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorTriggerMode(int triggerMode)
+PlusStatus vtkPlusAndorCamera::SetTriggerMode(int triggerMode)
 {
   this->AndorTriggerMode = triggerMode;
 
-  unsigned int result = SetTriggerMode(this->AndorTriggerMode);
+  unsigned int result = ::SetTriggerMode(this->AndorTriggerMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetTriggerMode")
   return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorTriggerMode()
+int vtkPlusAndorCamera::GetTriggerMode()
 {
   return this->AndorTriggerMode;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorHbin(int hbin)
+PlusStatus vtkPlusAndorCamera::SetHbin(int hbin)
 {
   this->AndorHbin = hbin;
 
@@ -384,13 +370,13 @@ PlusStatus vtkPlusAndorCamera::SetAndorHbin(int hbin)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorHbin()
+int vtkPlusAndorCamera::GetHbin()
 {
   return this->AndorHbin;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorVbin(int vbin)
+PlusStatus vtkPlusAndorCamera::SetVbin(int vbin)
 {
   this->AndorVbin = vbin;
 
@@ -398,13 +384,13 @@ PlusStatus vtkPlusAndorCamera::SetAndorVbin(int vbin)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorVbin()
+int vtkPlusAndorCamera::GetVbin()
 {
   return this->AndorVbin;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorCoolTemperature(int coolTemp)
+PlusStatus vtkPlusAndorCamera::SetCoolTemperature(int coolTemp)
 {
   this->AndorCoolTemperature = coolTemp;
 
@@ -412,13 +398,13 @@ PlusStatus vtkPlusAndorCamera::SetAndorCoolTemperature(int coolTemp)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorCoolTemperature()
+int vtkPlusAndorCamera::GetCoolTemperature()
 {
   return this->AndorCoolTemperature;
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetAndorSafeTemperature(int safeTemp)
+PlusStatus vtkPlusAndorCamera::SetSafeTemperature(int safeTemp)
 {
   this->AndorSafeTemperature = safeTemp;
 
@@ -426,12 +412,12 @@ PlusStatus vtkPlusAndorCamera::SetAndorSafeTemperature(int safeTemp)
 }
 
 // ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetAndorSafeTemperature()
+int vtkPlusAndorCamera::GetSafeTemperature()
 {
   return this->AndorSafeTemperature;
 }
 
-float vtkPlusAndorCamera::GetAndorCurrentTemperature()
+float vtkPlusAndorCamera::GetCurrentTemperature()
 {
   unsigned result = GetTemperatureF(&this->AndorCurrentTemperature);
   switch(result)
@@ -469,7 +455,7 @@ PlusStatus vtkPlusAndorCamera::AcquireFrame()
   // https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-ikon-m-934-specifications.pdf
   // so we choose 16-bit unsigned
   // GetMostRecentImage() is 32 bit signed variant
-  result = GetMostRecentImage16(&frameBuffer[0], xSize * ySize);
+  result = GetMostRecentImage16(&frameBuffer[0], xSize * ySize / (AndorHbin * AndorVbin));
   AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
 
   return PLUS_SUCCESS;

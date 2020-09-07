@@ -8,11 +8,17 @@ See License.txt for details.
 #include "vtkImageData.h"
 #include "vtkPlusAndorCamera.h"
 #include "ATMCD32D.h"
+#include "igtlOSUtil.h" // for Sleep
+
+#define AndorCheckErrorValueAndFailIfNeeded(returnValue, functionName) \
+  if(returnValue != DRV_SUCCESS)                                       \
+  {                                                                    \
+    LOG_ERROR("Failed AndorSDK operation: " << functionName            \
+              << " with error code: " << returnValue);                 \
+    return PLUS_FAIL;                                                  \
+  }
 
 vtkStandardNewMacro(vtkPlusAndorCamera);
-
-// ----------------------------------------------------------------------------
-// Public member operators ----------------------------------------------------
 
 // ----------------------------------------------------------------------------
 void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
@@ -132,7 +138,7 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
   this->AndorVbin                                  = 1; //Vertical binning
   this->AndorCoolTemperature                       = -50;
   this->AndorSafeTemperature                       = 5;
-  this->AndorCurrentTemperature                    = 0.0;
+  this->AndorCurrentTemperature                    = 0.123456789; // easy to spot as uninitialized
 
   // No callback function provided by the device,
   // so the data capture thread will be used
@@ -150,33 +156,11 @@ vtkPlusAndorCamera::~vtkPlusAndorCamera()
   }
 }
 
-// Check for the error codes returned from AndorSdK ---------------------------
-PlusStatus vtkPlusAndorCamera::CheckAndorSDKError(unsigned int _ui_err, const std::string _cp_func)
-{
-  if(_ui_err == DRV_SUCCESS)
-  {
-    return PLUS_SUCCESS;
-  }
-  else
-  {
-    LOG_ERROR("Failed AndorSDK operation: " << _cp_func << " with error code: " << _ui_err);
-    return PLUS_FAIL;
-  }
-}
-
-
-// Initialize Andor Camera ---------------------------------------------
-
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 {
-  //Initialize AndorSDK
   unsigned int result = Initialize("");
-
-  if(CheckAndorSDKError(result, "Initialize Andor SDK") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
+  AndorCheckErrorValueAndFailIfNeeded(result, "Initialize Andor SDK")
   LOG_DEBUG("Andor SDK initialized.");
 
   // Check the safe temperature, and the maximum allowable temperature on the camera.
@@ -196,16 +180,11 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   }
 
   result = CoolerON();
-  if(CheckAndorSDKError(result, "Turn Andor Camera Cooler on") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
+  AndorCheckErrorValueAndFailIfNeeded(result, "Turn Andor Camera Cooler on")
 
   result = SetTemperature(this->AndorCoolTemperature);
-  if(CheckAndorSDKError(result, "Set Andor Camera cool temperature") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
+  AndorCheckErrorValueAndFailIfNeeded(result, "Set Andor Camera cool temperature")
+
   GetAndorCurrentTemperature(); // logs the status and temperature
 
   return PLUS_SUCCESS;
@@ -215,8 +194,6 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 PlusStatus vtkPlusAndorCamera::InternalConnect()
 {
   LOG_TRACE("vtkPlusAndorCamera::InternalConnect");
-  //LOG_DEBUG("AndorSDK version " << bmDLLVer() << ", USB probe DLL version " << usbDLLVer());
-
   if(this->InitializeAndorCamera() != PLUS_SUCCESS)
   {
     return PLUS_FAIL;
@@ -234,44 +211,34 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
 {
   LOG_DEBUG("Disconnecting from Andor");
 
-  unsigned int andorResult;
+  int status;
+  unsigned result = IsCoolerOn(&status);
+  AndorCheckErrorValueAndFailIfNeeded(result, "IsCoolerOn")
 
-  int temperature;
-  GetTemperature(&temperature);
-
-  // It is vital to raise the temperature to above 0 before closing
-  // to reduce damage to the head. This routine simply blocks exiting
-  // the program until the temp is above 0
-  if(temperature < 0)
+  if(status)
   {
-    LOG_INFO("Raising the Andor camera cooler temperature to above 0");
-    if(CheckAndAdjustCameraTemperature(this->AndorSafeTemperature) != PLUS_SUCCESS)
+    GetAndorCurrentTemperature(); // updates this->AndorCurrentTemperature
+    if(this->AndorCurrentTemperature < this->AndorSafeTemperature)
     {
-      return PLUS_FAIL;
+      LOG_INFO("Temperature yet not at a safe point, turning the Cooler Off");
+      result = CoolerOFF();
+      AndorCheckErrorValueAndFailIfNeeded(result, "CoolerOff")
+
+      while(this->AndorCurrentTemperature < this->AndorSafeTemperature)
+      {
+        igtl::Sleep(5000); // wait a bit
+        GetAndorCurrentTemperature(); // logs the status and temperature
+      }
     }
   }
 
-  // Switch off the cooler
-  andorResult = CoolerOFF();
-  if(CheckAndorSDKError(andorResult, "CoolerOff") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
+  result = FreeInternalMemory();
+  AndorCheckErrorValueAndFailIfNeeded(result, "FreeInternalMemory")
 
-  // Free internal memory
-  andorResult = FreeInternalMemory();
-  if(CheckAndorSDKError(andorResult, "FreeInternalMemory") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
+  result = ShutDown();
+  AndorCheckErrorValueAndFailIfNeeded(result, "ShutDown")
 
-  // Shut down the camera
-  andorResult = ShutDown();
-  if(CheckAndorSDKError(andorResult, "ShutDown") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
+  LOG_INFO("Andor camera shut down successfully");
   return PLUS_SUCCESS;
 }
 
@@ -369,11 +336,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorShutter(int shutter)
 {
   this->AndorShutter = shutter;
   unsigned int result = SetShutter(1, this->AndorShutter, 0, 0);
-  if(CheckAndorSDKError(result, "SetShutter") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetShutter")
   return PLUS_SUCCESS;
 }
 
@@ -389,11 +352,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorExposureTime(float exposureTime)
   this->AndorExposureTime = exposureTime;
 
   unsigned int result = SetExposureTime(this->AndorExposureTime);
-  if(CheckAndorSDKError(result, "SetExposure") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetExposureTime")
   return PLUS_SUCCESS;
 }
 
@@ -409,11 +368,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorPreAmpGain(int preAmpGain)
   this->AndorPreAmpGain = preAmpGain;
 
   unsigned int result = SetPreAmpGain(this->AndorPreAmpGain);
-  if(CheckAndorSDKError(result, "SetPreAmpGain") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetPreAmpGain")
   return PLUS_SUCCESS;
 }
 
@@ -429,11 +384,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorAcquisitionMode(int acquisitionMode)
   this->AndorAcquisitionMode = acquisitionMode;
 
   unsigned int result = SetAcquisitionMode(this->AndorAcquisitionMode);
-  if(CheckAndorSDKError(result, "SetAcquisitionMode") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetAcquisitionMode")
   return PLUS_SUCCESS;
 }
 
@@ -449,11 +400,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorReadMode(int readMode)
   this->AndorReadMode = readMode;
 
   unsigned int result = SetReadMode(this->AndorReadMode);
-  if(CheckAndorSDKError(result, "SetReadMode") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetReadMode")
   return PLUS_SUCCESS;
 }
 
@@ -469,11 +416,7 @@ PlusStatus vtkPlusAndorCamera::SetAndorTriggerMode(int triggerMode)
   this->AndorTriggerMode = triggerMode;
 
   unsigned int result = SetTriggerMode(this->AndorTriggerMode);
-  if(CheckAndorSDKError(result, "SetTriggerMode") != PLUS_SUCCESS)
-  {
-    return PLUS_FAIL;
-  }
-
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetTriggerMode")
   return PLUS_SUCCESS;
 }
 
@@ -539,11 +482,10 @@ int vtkPlusAndorCamera::GetAndorSafeTemperature()
   return this->AndorSafeTemperature;
 }
 
-int vtkPlusAndorCamera::GetAndorCurrentTemperature()
+float vtkPlusAndorCamera::GetAndorCurrentTemperature()
 {
-  // Check the temperature
-  unsigned errorValue = GetTemperatureF(&this->AndorCurrentTemperature);
-  switch(errorValue)
+  unsigned result = GetTemperatureF(&this->AndorCurrentTemperature);
+  switch(result)
   {
     case DRV_TEMPERATURE_STABILIZED:
       LOG_INFO("Temperature has stabilized at " << this->AndorCurrentTemperature << " °C");

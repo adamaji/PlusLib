@@ -68,8 +68,8 @@ PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigE
 
   deviceConfig->SetIntAttribute("Shutter", this->AndorShutter);
   deviceConfig->SetFloatAttribute("ExposureTime", this->AndorExposureTime);
-  deviceConfig->SetIntAttribute("PreAmptGain", this->AndorPreAmpGain);
-  deviceConfig->SetIntAttribute("AcquitisionMode", this->AndorAcquisitionMode);
+  deviceConfig->SetIntAttribute("PreAmpGain", this->AndorPreAmpGain);
+  deviceConfig->SetIntAttribute("AcquisitionMode", this->AndorAcquisitionMode);
   deviceConfig->SetIntAttribute("ReadMode", this->AndorReadMode);
   deviceConfig->SetIntAttribute("TriggerMode", this->AndorTriggerMode);
   deviceConfig->SetIntAttribute("Hbin", this->AndorHbin);
@@ -187,6 +187,10 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 
   GetAndorCurrentTemperature(); // logs the status and temperature
 
+  result = GetDetector(&xSize, &ySize);
+  AndorCheckErrorValueAndFailIfNeeded(result, "GetDetectorSize")
+  frameBuffer.resize(xSize * ySize);
+
   return PLUS_SUCCESS;
 }
 
@@ -200,6 +204,16 @@ PlusStatus vtkPlusAndorCamera::InternalConnect()
   }
 
   // Setup the camera
+  this->SetAndorShutter(this->AndorShutter);
+  this->SetAndorExposureTime(this->AndorExposureTime);
+  this->SetAndorPreAmpGain(this->AndorPreAmpGain);
+  this->SetAndorAcquisitionMode(this->AndorAcquisitionMode);
+  this->SetAndorReadMode(this->AndorReadMode);
+  this->SetAndorTriggerMode(this->AndorTriggerMode);
+  this->SetAndorHbin(this->AndorHbin);
+  this->SetAndorVbin(this->AndorVbin);
+  this->SetAndorCoolTemperature(this->AndorCoolTemperature);
+  this->SetAndorSafeTemperature(this->AndorSafeTemperature);
 
   // Prepare acquisition
 
@@ -263,71 +277,6 @@ PlusStatus vtkPlusAndorCamera::InternalUpdate()
 {
   return PLUS_SUCCESS;
 }
-
-//
-//// ----------------------------------------------------------------------------
-//PlusStatus vtkPlusCapistranoVideoSource::WaitForFrame()
-//{
-//  bool  nextFrameReady = (usbWaitFrame() == 1);
-//  DWORD usbErrorCode   = usbError();
-//
-//  if (this->Frozen)
-//  {
-//    return PLUS_SUCCESS;
-//  }
-//
-//  static bool messagePrinted = false;
-//
-//  switch (usbErrorCode)
-//  {
-//    case USB_SUCCESS:
-//      messagePrinted = false;
-//      break;
-//    case USB_FAILED:
-//      if (!messagePrinted)
-//      {
-//        LOG_ERROR("USB: FAILURE. Probe was removed?");
-//        messagePrinted = true;
-//      }
-//      return PLUS_FAIL;
-//    case USB_TIMEOUT2A:
-//    case USB_TIMEOUT2B:
-//    case USB_TIMEOUT6A:
-//    case USB_TIMEOUT6B:
-//      if (nextFrameReady) // timeout is fine if we're in synchronized mode, so only log error if next frame is ready
-//      {
-//        LOG_WARNING("USB timeout");
-//      }
-//      break;
-//    case USB_NOTSEQ:
-//      if (!messagePrinted)
-//      {
-//        LOG_ERROR("Lost Probe Synchronization. Please check probe cables and restart.");
-//        messagePrinted = true;
-//      }
-//      FreezeDevice(true);
-//      FreezeDevice(false);
-//      break;
-//    case USB_STOPPED:
-//      if (!messagePrinted)
-//      {
-//        LOG_ERROR("USB: Stopped. Check probe and restart.");
-//        messagePrinted = true;
-//      }
-//      break;
-//    default:
-//      if (!messagePrinted)
-//      {
-//        LOG_ERROR("USB: Unknown USB error: " << usbErrorCode);
-//        messagePrinted = true;
-//      }
-//      FreezeDevice(true);
-//      FreezeDevice(false);
-//      break;
-//  }
-//
-//  return PLUS_SUCCESS;
-//}
 
 // Setup the Andor camera parameters ----------------------------------------------
 
@@ -499,4 +448,29 @@ float vtkPlusAndorCamera::GetAndorCurrentTemperature()
   }
 
   return this->AndorCurrentTemperature;
+}
+
+void vtkPlusAndorCamera::WaitForCooldown()
+{
+  while(GetTemperatureF(&this->AndorCurrentTemperature) != DRV_TEMPERATURE_STABILIZED)
+  {
+    igtl::Sleep(1000); // wait a bit
+  }
+}
+
+PlusStatus vtkPlusAndorCamera::AcquireFrame()
+{
+  unsigned result = StartAcquisition();
+  AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")
+  result = WaitForAcquisition();
+  AndorCheckErrorValueAndFailIfNeeded(result, "WaitForAcquisition")
+
+  // iKon-M 934 has 16-bit digitization
+  // https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-ikon-m-934-specifications.pdf
+  // so we choose 16-bit unsigned
+  // GetMostRecentImage() is 32 bit signed variant
+  result = GetMostRecentImage16(&frameBuffer[0], xSize * ySize);
+  AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
+
+  return PLUS_SUCCESS;
 }

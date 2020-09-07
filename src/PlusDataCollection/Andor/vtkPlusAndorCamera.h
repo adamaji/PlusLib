@@ -118,6 +118,12 @@ public:
   /*! Get the current temperature of the camera in degrees celsius. */
   float GetAndorCurrentTemperature();
 
+  /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
+  void WaitForCooldown();
+
+  /*! Acquire a single frame using current parameters. Data is put in the frameBuffer ivar. */
+  PlusStatus AcquireFrame();
+
   vtkPlusAndorCamera(const vtkPlusAndorCamera&) = delete;
   void operator=(const vtkPlusAndorCamera&) = delete;
 
@@ -180,6 +186,8 @@ protected:
   int   AndorSafeTemperature;
   float AndorCurrentTemperature;
 
+  int xSize;
+  int ySize;
   std::vector<uint16_t> frameBuffer;
 };
 

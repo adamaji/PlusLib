@@ -179,6 +179,8 @@ protected:
   int   AndorCoolTemperature;
   int   AndorSafeTemperature;
   float AndorCurrentTemperature;
+
+  std::vector<uint16_t> frameBuffer;
 };
 
 #endif

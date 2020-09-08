@@ -82,19 +82,17 @@ int main(int argc, char* argv[])
 
   bool printHelp(false);
   bool renderingOff(false);
-  bool printParams(false);
 
   std::string inputConfigFileName;
 
   vtksys::CommandLineArguments args;
   args.Initialize(argc, argv);
 
-  int verboseLevel = vtkPlusLogger::LOG_LEVEL_UNDEFINED;
+  int verboseLevel = vtkPlusLogger::LOG_LEVEL_INFO;
 
   args.AddArgument("--help", vtksys::CommandLineArguments::NO_ARGUMENT, &printHelp, "Print this help.");
   args.AddArgument("--config-file", vtksys::CommandLineArguments::EQUAL_ARGUMENT, &inputConfigFileName, "Config file containing the device configuration.");
   args.AddArgument("--rendering-off", vtksys::CommandLineArguments::NO_ARGUMENT, &renderingOff, "Run test without rendering.");
-  args.AddArgument("--print-params", vtksys::CommandLineArguments::NO_ARGUMENT, &printParams, "Print all the supported imaging parameters (for diagnostic purposes only).");
   args.AddArgument("--verbose", vtksys::CommandLineArguments::EQUAL_ARGUMENT, &verboseLevel, "Verbose level 1=error only, 2=warning, 3=info, 4=debug, 5=trace)");
 
   if(!args.Parse())
@@ -141,14 +139,8 @@ int main(int argc, char* argv[])
 
   LOG_INFO(andorCamDevice->GetSdkVersion());
 
-  if(printParams)
-  {
-    LOG_INFO("List of supported imaging parameters:");
-    // ToDo: Implement the following function
-    //capistranoDevice->PrintListOfImagingParameters();
-  }
-
-  //capistranoDevice->StartRecording();       //start recording frame from the video
+  andorCamDevice->AcquireBLIFrame();
+  andorCamDevice->StartRecording();
 
   if(renderingOff)
   {

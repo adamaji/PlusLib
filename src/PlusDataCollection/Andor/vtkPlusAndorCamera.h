@@ -116,6 +116,12 @@ public:
   /*! Get the current temperature of the camera in degrees celsius. */
   float GetCurrentTemperature();
 
+  /*! Uses currently active settings. */
+  PlusStatus AcquireBLIFrame();
+
+  /*! exposureTime parameter overrides current class' exposure time setting. */
+  PlusStatus AcquireGrayscaleFrame(float exposureTime);
+
   vtkPlusAndorCamera(const vtkPlusAndorCamera&) = delete;
   void operator=(const vtkPlusAndorCamera&) = delete;
 
@@ -173,7 +179,12 @@ protected:
   int AndorVbin = 1;
   int xSize = 1024;
   int ySize = 1024;
-  std::vector<uint16_t> frameBuffer;
+  std::vector<uint16_t> rawFrame;
+
+  std::vector<vtkPlusDataSource*> BLIraw;
+  std::vector<vtkPlusDataSource*> BLIrectified;
+  std::vector<vtkPlusDataSource*> GrayRaw;
+  std::vector<vtkPlusDataSource*> GrayRectified;
 };
 
 #endif

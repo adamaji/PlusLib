@@ -84,15 +84,9 @@ PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigE
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::NotifyConfigured()
 {
-  if(this->OutputChannels.size() > 1)
-  {
-    LOG_WARNING("vtkPlusAndorCamera is expecting one output channel and there are "
-                << this->OutputChannels.size() << " channels. First output channel will be used.");
-  }
-
   if(this->OutputChannels.empty())
   {
-    LOG_ERROR("No output channels defined for vtkPlusIntersonVideoSource. Cannot proceed.");
+    LOG_ERROR("No output channels defined for vtkPlusAndorCamera. Cannot proceed.");
     this->CorrectlyConfigured = false;
     return PLUS_FAIL;
   }
@@ -124,13 +118,22 @@ std::string vtkPlusAndorCamera::GetSdkVersion()
 //----------------------------------------------------------------------------
 vtkPlusAndorCamera::vtkPlusAndorCamera()
 {
-  this->RequireImageOrientationInConfiguration = true;
+  this->RequirePortNameInDeviceSetConfiguration = true;
 
-  // No callback function provided by the device,
-  // so the data capture thread will be used
-  // to poll the hardware and add new items to the buffer
-  this->StartThreadForInternalUpdates = true;
-  this->AcquisitionRate = 1;
+  // We will acquire the frames sporadically,
+  // and usually with long exposure times.
+  // We don't want polling to interfere with it.
+  this->StartThreadForInternalUpdates = false;
+
+  unsigned result = Initialize("");
+  if(result != DRV_SUCCESS)
+  {
+    LOG_ERROR("Andor SDK could not be initialized");
+  }
+  else
+  {
+    LOG_DEBUG("Andor SDK initialized.");
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -145,14 +148,10 @@ vtkPlusAndorCamera::~vtkPlusAndorCamera()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 {
-  unsigned int result = Initialize("");
-  AndorCheckErrorValueAndFailIfNeeded(result, "Initialize Andor SDK")
-  LOG_DEBUG("Andor SDK initialized.");
-
   // Check the safe temperature, and the maximum allowable temperature on the camera.
   // Use the min of the two as the safe temp.
   int MinTemp, MaxTemp;
-  result = GetTemperatureRange(&MinTemp, &MaxTemp);
+  unsigned result = GetTemperatureRange(&MinTemp, &MaxTemp);
   if(MaxTemp < this->AndorSafeTemperature)
   {
     this->AndorSafeTemperature = MaxTemp;
@@ -175,7 +174,6 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 
   result = GetDetector(&xSize, &ySize);
   AndorCheckErrorValueAndFailIfNeeded(result, "GetDetectorSize")
-  frameBuffer.resize(xSize * ySize / (AndorHbin*AndorVbin));
 
   return PLUS_SUCCESS;
 }
@@ -189,19 +187,20 @@ PlusStatus vtkPlusAndorCamera::InternalConnect()
     return PLUS_FAIL;
   }
 
-  // Setup the camera
-  this->SetShutter(this->AndorShutter);
-  this->SetExposureTime(this->AndorExposureTime);
-  this->SetPreAmpGain(this->AndorPreAmpGain);
-  this->SetAcquisitionMode(this->AndorAcquisitionMode);
-  this->SetReadMode(this->AndorReadMode);
-  this->SetTriggerMode(this->AndorTriggerMode);
-  this->SetHbin(this->AndorHbin);
-  this->SetVbin(this->AndorVbin);
-  this->SetCoolTemperature(this->AndorCoolTemperature);
-  this->SetSafeTemperature(this->AndorSafeTemperature);
-
-  // Prepare acquisition
+  this->GetVideoSourcesByPortName("BLIraw", BLIraw);
+  this->GetVideoSourcesByPortName("BLIrectified", BLIrectified);
+  this->GetVideoSourcesByPortName("GrayRaw", GrayRaw);
+  this->GetVideoSourcesByPortName("GrayRectified", GrayRectified);
+  if (BLIraw.size()+BLIrectified.size()+GrayRaw.size()+GrayRectified.size()==0)
+  {
+      vtkPlusDataSource* aSource = nullptr;
+      if (this->GetFirstActiveOutputVideoSource(aSource) != PLUS_SUCCESS || aSource == nullptr)
+      {
+          LOG_ERROR("Standard data sources are not defined, and unable to retrieve the video source in the capturing device.");
+          return PLUS_FAIL;
+      }
+      BLIraw.push_back(aSource); // this is the default port
+  }
 
   return PLUS_SUCCESS;
 }
@@ -210,6 +209,10 @@ PlusStatus vtkPlusAndorCamera::InternalConnect()
 PlusStatus vtkPlusAndorCamera::InternalDisconnect()
 {
   LOG_DEBUG("Disconnecting from Andor");
+  if(IsRecording())
+  {
+    this->InternalStopRecording();
+  }
 
   int status;
   unsigned result = IsCoolerOn(&status);
@@ -288,6 +291,9 @@ void vtkPlusAndorCamera::WaitForCooldown()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::AcquireFrame()
 {
+  unsigned long frameSize = xSize * ySize / (AndorHbin * AndorVbin);
+  rawFrame.resize(frameSize, 0);
+
   unsigned result = StartAcquisition();
   AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")
   result = WaitForAcquisition();
@@ -297,13 +303,23 @@ PlusStatus vtkPlusAndorCamera::AcquireFrame()
   // https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-ikon-m-934-specifications.pdf
   // so we choose 16-bit unsigned
   // GetMostRecentImage() is 32 bit signed variant
-  result = GetMostRecentImage16(&frameBuffer[0], xSize * ySize / (AndorHbin * AndorVbin));
+  result = GetMostRecentImage16(&rawFrame[0], frameSize);
   AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
 
   return PLUS_SUCCESS;
 }
 
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
+{
+  WaitForCooldown();
+  AcquireFrame();
 
+  // add it to the data source
+  // and if OpenCV is available to rectified data source
+
+  return PLUS_SUCCESS;
+}
 
 
 // Setup the Andor camera parameters ----------------------------------------------

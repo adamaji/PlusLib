@@ -25,16 +25,16 @@ void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 
-  os << indent << "Shutter: " << AndorShutter << std::endl;
-  os << indent << "ExposureTime: " << AndorExposureTime << std::endl;
-  os << indent << "HSSpeed: " << AndorHSSpeed[0] << AndorHSSpeed[1] << std::endl;
-  os << indent << "PreAmpGain: " << AndorPreAmpGain << std::endl;
-  os << indent << "AcquisitionMode: " << AndorAcquisitionMode << std::endl;
-  os << indent << "ReadMode: " << AndorReadMode << std::endl;
-  os << indent << "TriggerMode: " << AndorTriggerMode << std::endl;
-  os << indent << "CoolTemperature: " << AndorCoolTemperature << std::endl;
-  os << indent << "SafeTemperature: " << AndorSafeTemperature << std::endl;
-  os << indent << "CurrentTemperature: " << AndorCurrentTemperature << std::endl;
+  os << indent << "Shutter: " << Shutter << std::endl;
+  os << indent << "ExposureTime: " << ExposureTime << std::endl;
+  os << indent << "HSSpeed: " << HSSpeed[0] << HSSpeed[1] << std::endl;
+  os << indent << "PreAmpGain: " << PreAmpGain << std::endl;
+  os << indent << "AcquisitionMode: " << AcquisitionMode << std::endl;
+  os << indent << "ReadMode: " << ReadMode << std::endl;
+  os << indent << "TriggerMode: " << TriggerMode << std::endl;
+  os << indent << "CoolTemperature: " << CoolTemperature << std::endl;
+  os << indent << "SafeTemperature: " << SafeTemperature << std::endl;
+  os << indent << "CurrentTemperature: " << CurrentTemperature << std::endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -62,14 +62,14 @@ PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigE
 {
   XML_FIND_DEVICE_ELEMENT_REQUIRED_FOR_WRITING(deviceConfig, rootConfigElement);
 
-  deviceConfig->SetIntAttribute("Shutter", this->AndorShutter);
-  deviceConfig->SetFloatAttribute("ExposureTime", this->AndorExposureTime);
-  deviceConfig->SetIntAttribute("PreAmpGain", this->AndorPreAmpGain);
-  deviceConfig->SetIntAttribute("AcquisitionMode", this->AndorAcquisitionMode);
-  deviceConfig->SetIntAttribute("ReadMode", this->AndorReadMode);
-  deviceConfig->SetIntAttribute("TriggerMode", this->AndorTriggerMode);
-  deviceConfig->SetIntAttribute("CoolTemperature", this->AndorCoolTemperature);
-  deviceConfig->SetIntAttribute("SafeTemperature", this->AndorSafeTemperature);
+  deviceConfig->SetIntAttribute("Shutter", this->Shutter);
+  deviceConfig->SetFloatAttribute("ExposureTime", this->ExposureTime);
+  deviceConfig->SetIntAttribute("PreAmpGain", this->PreAmpGain);
+  deviceConfig->SetIntAttribute("AcquisitionMode", this->AcquisitionMode);
+  deviceConfig->SetIntAttribute("ReadMode", this->ReadMode);
+  deviceConfig->SetIntAttribute("TriggerMode", this->TriggerMode);
+  deviceConfig->SetIntAttribute("CoolTemperature", this->CoolTemperature);
+  deviceConfig->SetIntAttribute("SafeTemperature", this->SafeTemperature);
 
   return PLUS_SUCCESS;
 }
@@ -146,13 +146,13 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   // Use the min of the two as the safe temp.
   int MinTemp, MaxTemp;
   unsigned result = GetTemperatureRange(&MinTemp, &MaxTemp);
-  if(MaxTemp < this->AndorSafeTemperature)
+  if(MaxTemp < this->SafeTemperature)
   {
-    this->AndorSafeTemperature = MaxTemp;
+    this->SafeTemperature = MaxTemp;
   }
   LOG_INFO("The temperature range for the connected Andor Camera is: " << MinTemp << " and " << MaxTemp);
 
-  if(this->AndorCoolTemperature < MinTemp || this->AndorCoolTemperature > MaxTemp)
+  if(this->CoolTemperature < MinTemp || this->CoolTemperature > MaxTemp)
   {
     LOG_ERROR("Requested temperature for Andor camera is out of range");
     return PLUS_FAIL;
@@ -161,7 +161,7 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   result = CoolerON();
   AndorCheckErrorValueAndFailIfNeeded(result, "Turn Andor Camera Cooler on")
 
-  result = SetTemperature(this->AndorCoolTemperature);
+  result = SetTemperature(this->CoolTemperature);
   AndorCheckErrorValueAndFailIfNeeded(result, "Set Andor Camera cool temperature")
 
   GetCurrentTemperature(); // logs the status and temperature
@@ -214,14 +214,14 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
 
   if(status)
   {
-    GetCurrentTemperature(); // updates this->AndorCurrentTemperature
-    if(this->AndorCurrentTemperature < this->AndorSafeTemperature)
+    GetCurrentTemperature(); // updates this->CurrentTemperature
+    if(this->CurrentTemperature < this->SafeTemperature)
     {
       LOG_INFO("Temperature yet not at a safe point, turning the Cooler Off");
       result = CoolerOFF();
       AndorCheckErrorValueAndFailIfNeeded(result, "CoolerOff")
 
-      while(this->AndorCurrentTemperature < this->AndorSafeTemperature)
+      while(this->CurrentTemperature < this->SafeTemperature)
       {
         igtl::Sleep(5000); // wait a bit
         GetCurrentTemperature(); // logs the status and temperature
@@ -256,27 +256,27 @@ PlusStatus vtkPlusAndorCamera::InternalStopRecording()
 // ----------------------------------------------------------------------------
 float vtkPlusAndorCamera::GetCurrentTemperature()
 {
-  unsigned result = GetTemperatureF(&this->AndorCurrentTemperature);
+  unsigned result = GetTemperatureF(&this->CurrentTemperature);
   switch(result)
   {
     case DRV_TEMPERATURE_STABILIZED:
-      LOG_INFO("Temperature has stabilized at " << this->AndorCurrentTemperature << " °C");
+      LOG_INFO("Temperature has stabilized at " << this->CurrentTemperature << " °C");
       break;
     case DRV_TEMPERATURE_NOT_REACHED:
-      LOG_INFO("Cooling down, current temperature is " << this->AndorCurrentTemperature << " °C");
+      LOG_INFO("Cooling down, current temperature is " << this->CurrentTemperature << " °C");
       break;
     default:
-      LOG_INFO("Current temperature is " << this->AndorCurrentTemperature << " °C");
+      LOG_INFO("Current temperature is " << this->CurrentTemperature << " °C");
       break;
   }
 
-  return this->AndorCurrentTemperature;
+  return this->CurrentTemperature;
 }
 
 // ----------------------------------------------------------------------------
 void vtkPlusAndorCamera::WaitForCooldown()
 {
-  while(GetTemperatureF(&this->AndorCurrentTemperature) != DRV_TEMPERATURE_STABILIZED)
+  while(GetTemperatureF(&this->CurrentTemperature) != DRV_TEMPERATURE_STABILIZED)
   {
     igtl::Sleep(1000); // wait a bit
   }
@@ -321,8 +321,8 @@ PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetShutter(int shutter)
 {
-  this->AndorShutter = shutter;
-  unsigned int result = ::SetShutter(1, this->AndorShutter, 0, 0);
+  this->Shutter = shutter;
+  unsigned int result = ::SetShutter(1, this->Shutter, 0, 0);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetShutter")
   return PLUS_SUCCESS;
 }
@@ -330,15 +330,15 @@ PlusStatus vtkPlusAndorCamera::SetShutter(int shutter)
 // ----------------------------------------------------------------------------
 int vtkPlusAndorCamera::GetShutter()
 {
-  return this->AndorShutter;
+  return this->Shutter;
 }
 
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetExposureTime(float exposureTime)
 {
-  this->AndorExposureTime = exposureTime;
+  this->ExposureTime = exposureTime;
 
-  unsigned int result = ::SetExposureTime(this->AndorExposureTime);
+  unsigned int result = ::SetExposureTime(this->ExposureTime);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetExposureTime")
   return PLUS_SUCCESS;
 }
@@ -346,15 +346,15 @@ PlusStatus vtkPlusAndorCamera::SetExposureTime(float exposureTime)
 // ----------------------------------------------------------------------------
 float vtkPlusAndorCamera::GetExposureTime()
 {
-  return this->AndorExposureTime;
+  return this->ExposureTime;
 }
 
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetPreAmpGain(int preAmpGain)
 {
-  this->AndorPreAmpGain = preAmpGain;
+  this->PreAmpGain = preAmpGain;
 
-  unsigned int result = ::SetPreAmpGain(this->AndorPreAmpGain);
+  unsigned int result = ::SetPreAmpGain(this->PreAmpGain);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetPreAmpGain")
   return PLUS_SUCCESS;
 }
@@ -362,15 +362,15 @@ PlusStatus vtkPlusAndorCamera::SetPreAmpGain(int preAmpGain)
 // ----------------------------------------------------------------------------
 int vtkPlusAndorCamera::GetPreAmpGain()
 {
-  return this->AndorPreAmpGain;
+  return this->PreAmpGain;
 }
 
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetAcquisitionMode(int acquisitionMode)
 {
-  this->AndorAcquisitionMode = acquisitionMode;
+  this->AcquisitionMode = acquisitionMode;
 
-  unsigned int result = ::SetAcquisitionMode(this->AndorAcquisitionMode);
+  unsigned int result = ::SetAcquisitionMode(this->AcquisitionMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetAcquisitionMode")
   return PLUS_SUCCESS;
 }
@@ -378,15 +378,15 @@ PlusStatus vtkPlusAndorCamera::SetAcquisitionMode(int acquisitionMode)
 // ----------------------------------------------------------------------------
 int vtkPlusAndorCamera::GetAcquisitionMode()
 {
-  return this->AndorAcquisitionMode;
+  return this->AcquisitionMode;
 }
 
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetReadMode(int readMode)
 {
-  this->AndorReadMode = readMode;
+  this->ReadMode = readMode;
 
-  unsigned int result = ::SetReadMode(this->AndorReadMode);
+  unsigned int result = ::SetReadMode(this->ReadMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetReadMode")
   return PLUS_SUCCESS;
 }
@@ -394,15 +394,15 @@ PlusStatus vtkPlusAndorCamera::SetReadMode(int readMode)
 // ----------------------------------------------------------------------------
 int vtkPlusAndorCamera::GetReadMode()
 {
-  return this->AndorReadMode;
+  return this->ReadMode;
 }
 
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetTriggerMode(int triggerMode)
 {
-  this->AndorTriggerMode = triggerMode;
+  this->TriggerMode = triggerMode;
 
-  unsigned int result = ::SetTriggerMode(this->AndorTriggerMode);
+  unsigned int result = ::SetTriggerMode(this->TriggerMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetTriggerMode")
   return PLUS_SUCCESS;
 }
@@ -410,13 +410,13 @@ PlusStatus vtkPlusAndorCamera::SetTriggerMode(int triggerMode)
 // ----------------------------------------------------------------------------
 int vtkPlusAndorCamera::GetTriggerMode()
 {
-  return this->AndorTriggerMode;
+  return this->TriggerMode;
 }
 
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetCoolTemperature(int coolTemp)
 {
-  this->AndorCoolTemperature = coolTemp;
+  this->CoolTemperature = coolTemp;
 
   return PLUS_SUCCESS;
 }
@@ -424,13 +424,13 @@ PlusStatus vtkPlusAndorCamera::SetCoolTemperature(int coolTemp)
 // ----------------------------------------------------------------------------
 int vtkPlusAndorCamera::GetCoolTemperature()
 {
-  return this->AndorCoolTemperature;
+  return this->CoolTemperature;
 }
 
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetSafeTemperature(int safeTemp)
 {
-  this->AndorSafeTemperature = safeTemp;
+  this->SafeTemperature = safeTemp;
 
   return PLUS_SUCCESS;
 }
@@ -438,5 +438,5 @@ PlusStatus vtkPlusAndorCamera::SetSafeTemperature(int safeTemp)
 // ----------------------------------------------------------------------------
 int vtkPlusAndorCamera::GetSafeTemperature()
 {
-  return this->AndorSafeTemperature;
+  return this->SafeTemperature;
 }

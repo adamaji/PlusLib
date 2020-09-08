@@ -146,26 +146,26 @@ protected:
   PlusStatus AcquireFrame();
 
 
-  int                AndorShutter = 0;
-  float              AndorExposureTime = 1.0; // seconds
-  std::array<int, 2> AndorHSSpeed = { 0, 1 };
-  int                AndorPreAmpGain = 0;
+  int Shutter = 0;
+  float ExposureTime = 1.0; // seconds
+  std::array<int, 2> HSSpeed = { 0, 1 };
+  int PreAmpGain = 0;
 
   // TODO: Need to handle differet cases for read/acquisiton modes?
 
   /*! From AndorSDK:=> 1: Single Scan   2: Accumulate   3: Kinetics   4: Fast Kinetics   5: Run till abort  */
-  int AndorAcquisitionMode = 1;
+  int AcquisitionMode = 1;
 
   /*! From AndorSDK:=> 0: Full Vertical Binning   1: Multi-Track   2: Random-Track   3: Single-Track   4: Image */
-  int AndorReadMode = 4;
+  int ReadMode = 4;
 
   /*! From AndorSDK:=> 0. Internal   1. External  6. External Start  7. External Exposure(Bulb)  9. External FVB EM(only valid for EM Newton models in FVB mode) 10. Software Trigger  12. External Charge Shifting */
-  int AndorTriggerMode = 0;
+  int TriggerMode = 0;
 
   /*! Temperatures are in °C (degrees Celsius) */
-  int   AndorCoolTemperature = -50;
-  int   AndorSafeTemperature = 5;
-  float AndorCurrentTemperature = 0.123456789; // easy to spot as uninitialized
+  int CoolTemperature = -50;
+  int SafeTemperature = 5;
+  float CurrentTemperature = 0.123456789; // easy to spot as uninitialized
 
   int xSize = 1024;
   int ySize = 1024;

@@ -6,6 +6,7 @@ See License.txt for details.
 
 #include "PlusConfigure.h"
 #include "vtkImageData.h"
+#include "vtkPlusDataSource.h"
 #include "vtkPlusAndorCamera.h"
 #include "ATMCD32D.h"
 #include "igtlOSUtil.h" // for Sleep
@@ -106,8 +107,6 @@ std::string vtkPlusAndorCamera::GetSdkVersion()
   return versionString.str();
 }
 
-// ------------------------------------------------------------------------
-// Protected member operators ---------------------------------------------
 
 //----------------------------------------------------------------------------
 vtkPlusAndorCamera::vtkPlusAndorCamera()
@@ -166,10 +165,28 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 
   GetCurrentTemperature(); // logs the status and temperature
 
-  result = GetDetector(&xSize, &ySize);
+  int x, y;
+  result = GetDetector(&x, &y);
   AndorCheckErrorValueAndFailIfNeeded(result, "GetDetectorSize")
+  frameSize[0] = static_cast<unsigned>(x);
+  frameSize[1] = static_cast<unsigned>(y);
 
   return PLUS_SUCCESS;
+}
+
+// ----------------------------------------------------------------------------
+void vtkPlusAndorCamera::InitializePort(std::vector<vtkPlusDataSource*>& port)
+{
+  for(unsigned i = 0; i < port.size(); i++)
+  {
+    port[i]->SetPixelType(VTK_UNSIGNED_SHORT);
+    port[i]->SetImageType(US_IMG_BRIGHTNESS);
+    port[i]->SetOutputImageOrientation(US_IMG_ORIENT_MF);
+    port[i]->SetInputImageOrientation(US_IMG_ORIENT_MF);
+    port[i]->SetInputFrameSize(frameSize);
+
+    LOG_INFO("Andor source initialized. ID: " << port[i]->GetId());
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -185,16 +202,22 @@ PlusStatus vtkPlusAndorCamera::InternalConnect()
   this->GetVideoSourcesByPortName("BLIrectified", BLIrectified);
   this->GetVideoSourcesByPortName("GrayRaw", GrayRaw);
   this->GetVideoSourcesByPortName("GrayRectified", GrayRectified);
-  if (BLIraw.size()+BLIrectified.size()+GrayRaw.size()+GrayRectified.size()==0)
+
+  if(BLIraw.size() + BLIrectified.size() + GrayRaw.size() + GrayRectified.size() == 0)
   {
-      vtkPlusDataSource* aSource = nullptr;
-      if (this->GetFirstActiveOutputVideoSource(aSource) != PLUS_SUCCESS || aSource == nullptr)
-      {
-          LOG_ERROR("Standard data sources are not defined, and unable to retrieve the video source in the capturing device.");
-          return PLUS_FAIL;
-      }
-      BLIraw.push_back(aSource); // this is the default port
+    vtkPlusDataSource* aSource = nullptr;
+    if(this->GetFirstActiveOutputVideoSource(aSource) != PLUS_SUCCESS || aSource == nullptr)
+    {
+      LOG_ERROR("Standard data sources are not defined, and unable to retrieve the video source in the capturing device.");
+      return PLUS_FAIL;
+    }
+    BLIraw.push_back(aSource); // this is the default port
   }
+
+  this->InitializePort(BLIraw);
+  this->InitializePort(BLIrectified);
+  this->InitializePort(GrayRaw);
+  this->InitializePort(GrayRectified);
 
   return PLUS_SUCCESS;
 }
@@ -285,19 +308,21 @@ void vtkPlusAndorCamera::WaitForCooldown()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::AcquireFrame()
 {
-  unsigned long frameSize = xSize * ySize;
-  rawFrame.resize(frameSize, 0);
+  unsigned rawFrameSize = frameSize[0] * frameSize[1];
+  rawFrame.resize(rawFrameSize, 0);
 
   unsigned result = StartAcquisition();
   AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")
   result = WaitForAcquisition();
+  this->currentTime = vtkIGSIOAccurateTimer::GetSystemTime();
+  ++this->FrameNumber;
   AndorCheckErrorValueAndFailIfNeeded(result, "WaitForAcquisition")
 
   // iKon-M 934 has 16-bit digitization
   // https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-ikon-m-934-specifications.pdf
   // so we choose 16-bit unsigned
   // GetMostRecentImage() is 32 bit signed variant
-  result = GetMostRecentImage16(&rawFrame[0], frameSize);
+  result = GetMostRecentImage16(&rawFrame[0], rawFrameSize);
   AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
 
   return PLUS_SUCCESS;
@@ -310,6 +335,26 @@ PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
   AcquireFrame();
 
   // add it to the data source
+  for(unsigned i = 0; i < BLIraw.size(); i++)
+
+  {
+    if(BLIraw[i]->AddItem(&rawFrame[0],
+                          US_IMG_ORIENT_MF,
+                          frameSize, VTK_UNSIGNED_SHORT,
+                          1, US_IMG_BRIGHTNESS, 0,
+                          this->FrameNumber,
+                          currentTime,
+                          UNDEFINED_TIMESTAMP,
+                          nullptr) != PLUS_SUCCESS)
+    {
+      LOG_WARNING("Error adding item to AndorCamera video source " << BLIraw[i]->GetSourceId());
+    }
+    else
+    {
+      LOG_INFO("Success adding item to AndorCamera video source " << BLIraw[i]->GetSourceId());
+    }
+  }
+
   // and if OpenCV is available to rectified data source
 
   return PLUS_SUCCESS;

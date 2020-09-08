@@ -139,6 +139,9 @@ protected:
   /*! Initialize vtkPlusAndorCamera */
   PlusStatus InitializeAndorCamera();
 
+  /*! Initialize all data sources of the provided port */
+  void InitializePort(std::vector<vtkPlusDataSource*>& port);
+
   /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
   void WaitForCooldown();
 
@@ -167,9 +170,9 @@ protected:
   int SafeTemperature = 5;
   float CurrentTemperature = 0.123456789; // easy to spot as uninitialized
 
-  int xSize = 1024;
-  int ySize = 1024;
+  FrameSizeType frameSize = {1024, 1024, 1};
   std::vector<uint16_t> rawFrame;
+  double currentTime = UNDEFINED_TIMESTAMP;
 
   std::vector<vtkPlusDataSource*> BLIraw;
   std::vector<vtkPlusDataSource*> BLIrectified;

@@ -5,8 +5,8 @@
 =========================================================Plus=header=end*/
 
 /*!
-  \file vtkCapistranoVideoSourceTest.cxx
-  \brief Test basic connection to the Capistrano USB ultrasound probe
+  \file vtkAndorCameraTest.cxx
+  \brief Test basic connection to the Andor camera
 
   If the --rendering-off switch is defined then the connection is established, images are
   transferred for a few seconds, then the connection is closed (useful for automatic testing).
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
   int startX_02 = left < 0 ? 0 : left;
 
   bool printHelp(false);
-  bool renderingOff(true);
+  bool renderingOff(false);
   bool printParams(false);
 
   std::string inputConfigFileName;
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
   if(!args.Parse())
   {
     std::cerr << "Problem parsing arguments" << std::endl;
-    std::cout << "\n\nvtkPlusCapistranoVideoSourceTest1 help:" << args.GetHelp() << std::endl;
+    std::cout << "\n\nvtkPlusAndorCameraTest1 help:" << args.GetHelp() << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
 
   if(printHelp)
   {
-    std::cout << "\n\nvtkPlusCapistranoVideoSourceTest help:" << args.GetHelp() << std::endl;
+    std::cout << "\n\nvtkPlusAndorCameraTest help:" << args.GetHelp() << std::endl;
     exit(EXIT_SUCCESS);
   }
 

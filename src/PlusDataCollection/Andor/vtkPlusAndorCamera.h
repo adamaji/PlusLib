@@ -97,14 +97,6 @@ public:
   PlusStatus SetTriggerMode(int triggerMode);
   int GetTriggerMode();
 
-  /*! Horizontal binning */
-  PlusStatus SetHbin(int hbin);
-  int GetHbin();
-
-  /*! Vertical binning */
-  PlusStatus SetVbin(int vbin);
-  int GetVbin();
-
   /*! Normal operating temperature (degrees celsius). */
   PlusStatus SetCoolTemperature(int coolTemp);
   int GetCoolTemperature();
@@ -175,8 +167,6 @@ protected:
   int   AndorSafeTemperature = 5;
   float AndorCurrentTemperature = 0.123456789; // easy to spot as uninitialized
 
-  int AndorHbin = 1;
-  int AndorVbin = 1;
   int xSize = 1024;
   int ySize = 1024;
   std::vector<uint16_t> rawFrame;

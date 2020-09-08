@@ -32,8 +32,6 @@ void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "AcquisitionMode: " << AndorAcquisitionMode << std::endl;
   os << indent << "ReadMode: " << AndorReadMode << std::endl;
   os << indent << "TriggerMode: " << AndorTriggerMode << std::endl;
-  os << indent << "Hbin: " << AndorHbin << std::endl;
-  os << indent << "Vbin: " << AndorVbin << std::endl;
   os << indent << "CoolTemperature: " << AndorCoolTemperature << std::endl;
   os << indent << "SafeTemperature: " << AndorSafeTemperature << std::endl;
   os << indent << "CurrentTemperature: " << AndorCurrentTemperature << std::endl;
@@ -53,8 +51,6 @@ PlusStatus vtkPlusAndorCamera::ReadConfiguration(vtkXMLDataElement* rootConfigEl
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, AcquisitionMode, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, ReadMode, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, TriggerMode, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, Hbin, deviceConfig);
-  XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, Vbin, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, CoolTemperature, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, SafeTemperature, deviceConfig);
 
@@ -72,8 +68,6 @@ PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigE
   deviceConfig->SetIntAttribute("AcquisitionMode", this->AndorAcquisitionMode);
   deviceConfig->SetIntAttribute("ReadMode", this->AndorReadMode);
   deviceConfig->SetIntAttribute("TriggerMode", this->AndorTriggerMode);
-  deviceConfig->SetIntAttribute("Hbin", this->AndorHbin);
-  deviceConfig->SetIntAttribute("Vbin", this->AndorVbin);
   deviceConfig->SetIntAttribute("CoolTemperature", this->AndorCoolTemperature);
   deviceConfig->SetIntAttribute("SafeTemperature", this->AndorSafeTemperature);
 
@@ -291,7 +285,7 @@ void vtkPlusAndorCamera::WaitForCooldown()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::AcquireFrame()
 {
-  unsigned long frameSize = xSize * ySize / (AndorHbin * AndorVbin);
+  unsigned long frameSize = xSize * ySize;
   rawFrame.resize(frameSize, 0);
 
   unsigned result = StartAcquisition();
@@ -417,34 +411,6 @@ PlusStatus vtkPlusAndorCamera::SetTriggerMode(int triggerMode)
 int vtkPlusAndorCamera::GetTriggerMode()
 {
   return this->AndorTriggerMode;
-}
-
-// ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetHbin(int hbin)
-{
-  this->AndorHbin = hbin;
-
-  return PLUS_SUCCESS;
-}
-
-// ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetHbin()
-{
-  return this->AndorHbin;
-}
-
-// ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::SetVbin(int vbin)
-{
-  this->AndorVbin = vbin;
-
-  return PLUS_SUCCESS;
-}
-
-// ----------------------------------------------------------------------------
-int vtkPlusAndorCamera::GetVbin()
-{
-  return this->AndorVbin;
 }
 
 // ----------------------------------------------------------------------------

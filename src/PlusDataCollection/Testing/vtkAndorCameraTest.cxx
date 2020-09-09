@@ -38,10 +38,6 @@
 #include "vtksys/CommandLineArguments.hxx"
 #include <stdlib.h>
 
-//----------------------------------------------------------------------------
-
-//---------------------------------------------------------------------------------
-
 class vtkMyCallback : public vtkCommand
 {
 public:
@@ -70,7 +66,6 @@ private:
   }
 };
 
-//-------------------------------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
@@ -129,6 +124,19 @@ int main(int argc, char* argv[])
     }
 
     andorCamDevice->ReadConfiguration(configRootElement);
+
+    //update and write configuration
+    andorCamDevice->WriteConfiguration(configRootElement);
+    std::string outConfigFilename = inputConfigFileName + "-updated.xml";
+    bool success = vtkXMLUtilities::WriteElementToFile(configRootElement, outConfigFilename.c_str());
+    if(!success)
+    {
+      LOG_ERROR("Unable to write configuration to: " << outConfigFilename + ".xml");
+    }
+    else
+    {
+      LOG_INFO("Configuration file written to: " << outConfigFilename + ".xml");
+    }
   }
 
   if(andorCamDevice->Connect() != PLUS_SUCCESS)
@@ -159,6 +167,7 @@ int main(int argc, char* argv[])
     viewer->SetColorWindow(256);
     viewer->SetColorLevel(400);
     viewer->SetZSlice(0);
+    viewer->SetSize(1024, 1024);
 
     //Create the interactor that handles the event loop
     vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();

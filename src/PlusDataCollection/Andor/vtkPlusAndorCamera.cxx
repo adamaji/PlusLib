@@ -94,14 +94,14 @@ std::string vtkPlusAndorCamera::GetSdkVersion()
 {
   std::ostringstream versionString;
 
-  unsigned int epromVer;
-  unsigned int cofVer;
-  unsigned int driverRev;
-  unsigned int driverVer;
-  unsigned int dllRev;
-  unsigned int dllVer;
+  unsigned epromVer;
+  unsigned cofVer;
+  unsigned driverRev;
+  unsigned driverVer;
+  unsigned dllRev;
+  unsigned dllVer;
 
-  unsigned int andorResult = GetSoftwareVersion(&epromVer, &cofVer, &driverRev, &driverVer, &dllRev, &dllVer);
+  unsigned andorResult = GetSoftwareVersion(&epromVer, &cofVer, &driverRev, &driverVer, &dllRev, &dllVer);
 
   versionString << "Andor SDK version: "  << dllVer << "." << dllRev << std::endl;
   return versionString.str();
@@ -172,7 +172,8 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   frameSize[0] = static_cast<unsigned>(x);
   frameSize[1] = static_cast<unsigned>(y);
 
-  result = SetImage(1, 1, 1, 1024, 1, 1024);
+  // binning of 1 (meaning no binning), and full sensor size
+  result = SetImage(1, 1, 1, x, 1, y);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetImage")
 
   result = PrepareAcquisition();
@@ -314,16 +315,17 @@ void vtkPlusAndorCamera::WaitForCooldown()
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::AcquireFrame()
+PlusStatus vtkPlusAndorCamera::AcquireFrame(float exposure)
 {
   unsigned rawFrameSize = frameSize[0] * frameSize[1];
   rawFrame.resize(rawFrameSize, 0);
 
-  unsigned result = StartAcquisition();
+  unsigned result = ::SetExposureTime(this->ExposureTime);
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetExposureTime")
+  result = StartAcquisition();
   AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")
   result = WaitForAcquisition();
   this->currentTime = vtkIGSIOAccurateTimer::GetSystemTime();
-  ++this->FrameNumber;
   AndorCheckErrorValueAndFailIfNeeded(result, "WaitForAcquisition")
 
   // iKon-M 934 has 16-bit digitization
@@ -333,6 +335,7 @@ PlusStatus vtkPlusAndorCamera::AcquireFrame()
   result = GetMostRecentImage16(&rawFrame[0], rawFrameSize);
   AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
 
+  ++this->FrameNumber;
   return PLUS_SUCCESS;
 }
 
@@ -340,7 +343,7 @@ PlusStatus vtkPlusAndorCamera::AcquireFrame()
 PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 {
   //WaitForCooldown();
-  AcquireFrame();
+  AcquireFrame(this->ExposureTime);
 
   // add it to the data source
   for(unsigned i = 0; i < BLIraw.size(); i++)
@@ -375,7 +378,7 @@ PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 PlusStatus vtkPlusAndorCamera::SetShutter(int shutter)
 {
   this->Shutter = shutter;
-  unsigned int result = ::SetShutter(1, this->Shutter, 0, 0);
+  unsigned result = ::SetShutter(1, this->Shutter, 0, 0);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetShutter")
   return PLUS_SUCCESS;
 }
@@ -391,7 +394,7 @@ PlusStatus vtkPlusAndorCamera::SetExposureTime(float exposureTime)
 {
   this->ExposureTime = exposureTime;
 
-  unsigned int result = ::SetExposureTime(this->ExposureTime);
+  unsigned result = ::SetExposureTime(this->ExposureTime);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetExposureTime")
   return PLUS_SUCCESS;
 }
@@ -407,7 +410,7 @@ PlusStatus vtkPlusAndorCamera::SetPreAmpGain(int preAmpGain)
 {
   this->PreAmpGain = preAmpGain;
 
-  unsigned int result = ::SetPreAmpGain(this->PreAmpGain);
+  unsigned result = ::SetPreAmpGain(this->PreAmpGain);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetPreAmpGain")
   return PLUS_SUCCESS;
 }
@@ -423,7 +426,7 @@ PlusStatus vtkPlusAndorCamera::SetAcquisitionMode(int acquisitionMode)
 {
   this->AcquisitionMode = acquisitionMode;
 
-  unsigned int result = ::SetAcquisitionMode(this->AcquisitionMode);
+  unsigned result = ::SetAcquisitionMode(this->AcquisitionMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetAcquisitionMode")
   return PLUS_SUCCESS;
 }
@@ -439,7 +442,7 @@ PlusStatus vtkPlusAndorCamera::SetReadMode(int readMode)
 {
   this->ReadMode = readMode;
 
-  unsigned int result = ::SetReadMode(this->ReadMode);
+  unsigned result = ::SetReadMode(this->ReadMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetReadMode")
   return PLUS_SUCCESS;
 }
@@ -455,7 +458,7 @@ PlusStatus vtkPlusAndorCamera::SetTriggerMode(int triggerMode)
 {
   this->TriggerMode = triggerMode;
 
-  unsigned int result = ::SetTriggerMode(this->TriggerMode);
+  unsigned result = ::SetTriggerMode(this->TriggerMode);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetTriggerMode")
   return PLUS_SUCCESS;
 }

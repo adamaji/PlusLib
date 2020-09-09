@@ -152,7 +152,7 @@ protected:
   void WaitForCooldown();
 
   /*! Acquire a single frame using current parameters. Data is put in the frameBuffer ivar. */
-  PlusStatus AcquireFrame();
+  PlusStatus AcquireFrame(float exposure);
 
 
   int Shutter = 0;

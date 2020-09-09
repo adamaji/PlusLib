@@ -368,8 +368,8 @@ void vtkPlusAndorCamera::ApplyFrameCorrections()
   cv::Mat result;
   cv::Mat cameraIntrinsics;
   cv::Mat distanceCoefficients;
-  cv::undistort(floatImage, result, cameraIntrinsics, distanceCoefficients);
-  result.convertTo(cvIMG, CV_16UC1);
+  //cv::undistort(floatImage, result, cameraIntrinsics, distanceCoefficients);
+  //result.convertTo(cvIMG, CV_16UC1);
 }
 
 // ----------------------------------------------------------------------------

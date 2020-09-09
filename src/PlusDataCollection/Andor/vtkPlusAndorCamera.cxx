@@ -116,7 +116,8 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
   // We will acquire the frames sporadically,
   // and usually with long exposure times.
   // We don't want polling to interfere with it.
-  this->StartThreadForInternalUpdates = false;
+  this->StartThreadForInternalUpdates = true; //debugging
+  this->AcquisitionRate = 1.0;
 
   unsigned result = Initialize("");
   if(result != DRV_SUCCESS)
@@ -301,7 +302,8 @@ void vtkPlusAndorCamera::WaitForCooldown()
 {
   while(GetTemperatureF(&this->CurrentTemperature) != DRV_TEMPERATURE_STABILIZED)
   {
-    igtl::Sleep(1000); // wait a bit
+    igtl::Sleep(5000); // wait a bit
+    GetCurrentTemperature(); // logs the status and temperature
   }
 }
 
@@ -331,7 +333,7 @@ PlusStatus vtkPlusAndorCamera::AcquireFrame()
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 {
-  WaitForCooldown();
+  //WaitForCooldown();
   AcquireFrame();
 
   // add it to the data source

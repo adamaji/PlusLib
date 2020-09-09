@@ -111,6 +111,12 @@ public:
   /*! Uses currently active settings. */
   PlusStatus AcquireBLIFrame();
 
+  PlusStatus InternalUpdate()
+  {
+      AcquireBLIFrame();
+      return PLUS_SUCCESS;
+  }
+
   /*! exposureTime parameter overrides current class' exposure time setting. */
   PlusStatus AcquireGrayscaleFrame(float exposureTime);
 

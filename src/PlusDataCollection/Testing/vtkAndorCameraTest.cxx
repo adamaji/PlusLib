@@ -112,32 +112,16 @@ int main(int argc, char* argv[])
 
 
   // Read config file
-  if(STRCASECMP(inputConfigFileName.c_str(), "") != 0)
+  LOG_DEBUG("Reading config file...");
+  vtkSmartPointer<vtkXMLDataElement> configRootElement = vtkSmartPointer<vtkXMLDataElement>::New();
+
+  if(PlusXmlUtils::ReadDeviceSetConfigurationFromFile(configRootElement, inputConfigFileName.c_str()) == PLUS_FAIL)
   {
-    LOG_DEBUG("Reading config file...");
-    vtkSmartPointer<vtkXMLDataElement> configRootElement = vtkSmartPointer<vtkXMLDataElement>::New();
-
-    if(PlusXmlUtils::ReadDeviceSetConfigurationFromFile(configRootElement, inputConfigFileName.c_str()) == PLUS_FAIL)
-    {
-      LOG_ERROR("Unable to read configuration from file " << inputConfigFileName.c_str());
-      return EXIT_FAILURE;
-    }
-
-    andorCamDevice->ReadConfiguration(configRootElement);
-
-    //update and write configuration
-    andorCamDevice->WriteConfiguration(configRootElement);
-    std::string outConfigFilename = inputConfigFileName + "-updated.xml";
-    bool success = vtkXMLUtilities::WriteElementToFile(configRootElement, outConfigFilename.c_str());
-    if(!success)
-    {
-      LOG_ERROR("Unable to write configuration to: " << outConfigFilename + ".xml");
-    }
-    else
-    {
-      LOG_INFO("Configuration file written to: " << outConfigFilename + ".xml");
-    }
+    LOG_ERROR("Unable to read configuration from file " << inputConfigFileName.c_str());
+    return EXIT_FAILURE;
   }
+
+  andorCamDevice->ReadConfiguration(configRootElement);
 
   if(andorCamDevice->Connect() != PLUS_SUCCESS)
   {
@@ -146,6 +130,8 @@ int main(int argc, char* argv[])
   }
 
   LOG_INFO(andorCamDevice->GetSdkVersion());
+  vtkIndent indent;
+  andorCamDevice->PrintSelf(std::cout, indent);
 
   andorCamDevice->AcquireBLIFrame();
   andorCamDevice->StartRecording();
@@ -189,6 +175,19 @@ int main(int argc, char* argv[])
   }
 
   andorCamDevice->Disconnect();
+
+  //update and write configuration
+  andorCamDevice->WriteConfiguration(configRootElement);
+  std::string outConfigFilename = inputConfigFileName + "-updated.xml";
+  bool success = vtkXMLUtilities::WriteElementToFile(configRootElement, outConfigFilename.c_str());
+  if(!success)
+  {
+    LOG_ERROR("Unable to write configuration to: " << outConfigFilename + ".xml");
+  }
+  else
+  {
+    LOG_INFO("Configuration file written to: " << outConfigFilename + ".xml");
+  }
 
   return EXIT_SUCCESS;
 }

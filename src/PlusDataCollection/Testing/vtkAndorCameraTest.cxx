@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
   bool renderingOff(false);
 
   std::string inputConfigFileName;
-  std::string outputFileName("AndorCameraTest.nrrd");
+  std::string outputFileName("AndorCameraTest.mha");
 
   vtksys::CommandLineArguments args;
   args.Initialize(argc, argv);
@@ -137,6 +137,7 @@ int main(int argc, char* argv[])
   andorCamDevice->PrintSelf(std::cout, indent);
 
   andorCamDevice->AcquireBLIFrame();
+  andorCamDevice->AcquireGrayscaleFrame(0.1);
   andorCamDevice->StartRecording();
 
   if(renderingOff)
@@ -155,7 +156,7 @@ int main(int argc, char* argv[])
     }
 
     LOG_DEBUG("Rendering disabled. Wait for just a few seconds to acquire data before exiting");
-    Sleep(5000); // no need to use accurate timer, it's just an approximate delay
+    Sleep(3000); // no need to use accurate timer, it's just an approximate delay
 
     vtkPlusDataSource* bSource(nullptr);
     raw->GetVideoSource(bSource);

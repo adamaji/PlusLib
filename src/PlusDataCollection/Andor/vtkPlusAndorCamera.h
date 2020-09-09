@@ -111,14 +111,11 @@ public:
   /*! Uses currently active settings. */
   PlusStatus AcquireBLIFrame();
 
-  PlusStatus InternalUpdate()
-  {
-      AcquireBLIFrame();
-      return PLUS_SUCCESS;
-  }
-
   /*! exposureTime parameter overrides current class' exposure time setting. */
   PlusStatus AcquireGrayscaleFrame(float exposureTime);
+
+  /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
+  void WaitForCooldown();
 
   vtkPlusAndorCamera(const vtkPlusAndorCamera&) = delete;
   void operator=(const vtkPlusAndorCamera&) = delete;
@@ -145,15 +142,25 @@ protected:
   /*! Initialize vtkPlusAndorCamera */
   PlusStatus InitializeAndorCamera();
 
-  /*! Initialize all data sources of the provided port */
-  void InitializePort(std::vector<vtkPlusDataSource*>& port);
+  using DataSourceArray = std::vector<vtkPlusDataSource*>;
 
-  /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
-  void WaitForCooldown();
+  /*! Initialize all data sources of the provided port */
+  void InitializePort(DataSourceArray& port);
 
   /*! Acquire a single frame using current parameters. Data is put in the frameBuffer ivar. */
   PlusStatus AcquireFrame(float exposure);
 
+  /*! Data from the frameBuffer ivar is added to the provided data source. */
+  void AddFrameToDataSource(DataSourceArray& ds);
+
+  /*! This will be triggered regularly if this->StartThreadForInternalUpdates is true.
+   * Framerate is controlled by this->AcquisitionRate. This is meant for debugging.
+   */
+  PlusStatus InternalUpdate() override
+  {
+    AcquireBLIFrame();
+    return PLUS_SUCCESS;
+  }
 
   int Shutter = 0;
   float ExposureTime = 1.0; // seconds
@@ -180,10 +187,10 @@ protected:
   std::vector<uint16_t> rawFrame;
   double currentTime = UNDEFINED_TIMESTAMP;
 
-  std::vector<vtkPlusDataSource*> BLIraw;
-  std::vector<vtkPlusDataSource*> BLIrectified;
-  std::vector<vtkPlusDataSource*> GrayRaw;
-  std::vector<vtkPlusDataSource*> GrayRectified;
+  DataSourceArray BLIraw;
+  DataSourceArray BLIrectified;
+  DataSourceArray GrayRaw;
+  DataSourceArray GrayRectified;
 };
 
 #endif

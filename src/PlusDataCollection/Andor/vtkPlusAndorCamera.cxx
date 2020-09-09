@@ -113,11 +113,8 @@ vtkPlusAndorCamera::vtkPlusAndorCamera()
 {
   this->RequirePortNameInDeviceSetConfiguration = true;
 
-  // We will acquire the frames sporadically,
-  // and usually with long exposure times.
-  // We don't want polling to interfere with it.
-  this->StartThreadForInternalUpdates = true; //debugging
-  this->AcquisitionRate = 1.0;
+  this->StartThreadForInternalUpdates = true; // should frames be acquired automatically?
+  this->AcquisitionRate = 1.0; // this controls the frequency
 
   unsigned result = Initialize("");
   if(result != DRV_SUCCESS)
@@ -183,7 +180,7 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
 }
 
 // ----------------------------------------------------------------------------
-void vtkPlusAndorCamera::InitializePort(std::vector<vtkPlusDataSource*>& port)
+void vtkPlusAndorCamera::InitializePort(DataSourceArray& port)
 {
   for(unsigned i = 0; i < port.size(); i++)
   {
@@ -335,8 +332,30 @@ PlusStatus vtkPlusAndorCamera::AcquireFrame(float exposure)
   result = GetMostRecentImage16(&rawFrame[0], rawFrameSize);
   AndorCheckErrorValueAndFailIfNeeded(result, "GetMostRecentImage16")
 
-  ++this->FrameNumber;
   return PLUS_SUCCESS;
+}
+
+// ----------------------------------------------------------------------------
+void vtkPlusAndorCamera::AddFrameToDataSource(DataSourceArray& ds)
+{
+  for(unsigned i = 0; i < ds.size(); i++)
+  {
+    if(ds[i]->AddItem(&rawFrame[0],
+                      US_IMG_ORIENT_MF,
+                      frameSize, VTK_UNSIGNED_SHORT,
+                      1, US_IMG_BRIGHTNESS, 0,
+                      this->FrameNumber,
+                      currentTime,
+                      UNDEFINED_TIMESTAMP,
+                      nullptr) != PLUS_SUCCESS)
+    {
+      LOG_WARNING("Error adding item to AndorCamera video source " << ds[i]->GetSourceId());
+    }
+    else
+    {
+      LOG_INFO("Success adding item to AndorCamera video source " << ds[i]->GetSourceId());
+    }
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -344,27 +363,21 @@ PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 {
   //WaitForCooldown();
   AcquireFrame(this->ExposureTime);
+  ++this->FrameNumber;
+  AddFrameToDataSource(BLIraw);
 
-  // add it to the data source
-  for(unsigned i = 0; i < BLIraw.size(); i++)
+  // and if OpenCV is available to rectified data source
 
-  {
-    if(BLIraw[i]->AddItem(&rawFrame[0],
-                          US_IMG_ORIENT_MF,
-                          frameSize, VTK_UNSIGNED_SHORT,
-                          1, US_IMG_BRIGHTNESS, 0,
-                          this->FrameNumber,
-                          currentTime,
-                          UNDEFINED_TIMESTAMP,
-                          nullptr) != PLUS_SUCCESS)
-    {
-      LOG_WARNING("Error adding item to AndorCamera video source " << BLIraw[i]->GetSourceId());
-    }
-    else
-    {
-      LOG_INFO("Success adding item to AndorCamera video source " << BLIraw[i]->GetSourceId());
-    }
-  }
+  return PLUS_SUCCESS;
+}
+
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::AcquireGrayscaleFrame(float exposureTime)
+{
+  //WaitForCooldown();
+  AcquireFrame(exposureTime);
+  ++this->FrameNumber;
+  AddFrameToDataSource(GrayRaw);
 
   // and if OpenCV is available to rectified data source
 

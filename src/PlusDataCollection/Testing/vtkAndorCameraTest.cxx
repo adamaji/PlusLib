@@ -156,8 +156,8 @@ int main(int argc, char* argv[])
 
     vtkSmartPointer<vtkImageViewer> viewer = vtkSmartPointer<vtkImageViewer>::New();
     viewer->SetInputConnection(andorCamDevice->GetOutputPort());   //set image to the render and window
-    viewer->SetColorWindow(255);
-    viewer->SetColorLevel(127.5);
+    viewer->SetColorWindow(256);
+    viewer->SetColorLevel(400);
     viewer->SetZSlice(0);
 
     //Create the interactor that handles the event loop

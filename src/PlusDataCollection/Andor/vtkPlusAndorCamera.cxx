@@ -320,7 +320,7 @@ PlusStatus vtkPlusAndorCamera::AcquireFrame(float exposure)
   unsigned rawFrameSize = frameSize[0] * frameSize[1];
   rawFrame.resize(rawFrameSize, 0);
 
-  unsigned result = ::SetExposureTime(this->ExposureTime);
+  unsigned result = ::SetExposureTime(exposure);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetExposureTime")
   result = StartAcquisition();
   AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")

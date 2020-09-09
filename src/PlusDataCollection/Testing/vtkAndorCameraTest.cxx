@@ -33,6 +33,7 @@
 #include "vtkRenderer.h"
 #include "vtkSmartPointer.h"
 #include "vtkPlusAndorCamera.h"
+#include "vtkPlusDataSource.h"
 
 #include "vtkXMLUtilities.h"
 #include "vtksys/CommandLineArguments.hxx"
@@ -79,6 +80,7 @@ int main(int argc, char* argv[])
   bool renderingOff(false);
 
   std::string inputConfigFileName;
+  std::string outputFileName("AndorCameraTest.nrrd");
 
   vtksys::CommandLineArguments args;
   args.Initialize(argc, argv);
@@ -88,6 +90,7 @@ int main(int argc, char* argv[])
   args.AddArgument("--help", vtksys::CommandLineArguments::NO_ARGUMENT, &printHelp, "Print this help.");
   args.AddArgument("--config-file", vtksys::CommandLineArguments::EQUAL_ARGUMENT, &inputConfigFileName, "Config file containing the device configuration.");
   args.AddArgument("--rendering-off", vtksys::CommandLineArguments::NO_ARGUMENT, &renderingOff, "Run test without rendering.");
+  args.AddArgument("--output-seq-file", vtksys::CommandLineArguments::EQUAL_ARGUMENT, &outputFileName, "Filename of the output video buffer sequence metafile (Default: VideoBufferMetafile)");
   args.AddArgument("--verbose", vtksys::CommandLineArguments::EQUAL_ARGUMENT, &verboseLevel, "Verbose level 1=error only, 2=warning, 3=info, 4=debug, 5=trace)");
 
   if(!args.Parse())
@@ -138,11 +141,32 @@ int main(int argc, char* argv[])
 
   if(renderingOff)
   {
-    // just run the recording for  a few seconds then exit
+    vtkPlusChannel* raw(nullptr);
+    if(andorCamDevice->GetOutputChannelByName(raw, "VideoStream") != PLUS_SUCCESS)
+    {
+      LOG_ERROR("Unable to locate the channel with Id=\"VideoStream\". Check config file.");
+      return EXIT_FAILURE;
+    }
+
+    vtkPlusChannel* rectified(nullptr);
+    if(andorCamDevice->GetOutputChannelByName(rectified, "AdditionalStream") != PLUS_SUCCESS)
+    {
+      LOG_WARNING("Unable to locate the channel with Id=\"AdditionalStream\". Additional mode will not be used.");
+    }
+
     LOG_DEBUG("Rendering disabled. Wait for just a few seconds to acquire data before exiting");
-    Sleep(500); // no need to use accurate timer, it's just an approximate delay
-    andorCamDevice->StopRecording();
-    andorCamDevice->Disconnect();
+    Sleep(5000); // no need to use accurate timer, it's just an approximate delay
+
+    vtkPlusDataSource* bSource(nullptr);
+    raw->GetVideoSource(bSource);
+    bSource->WriteToSequenceFile(outputFileName.c_str());
+
+    if(rectified)
+    {
+      vtkPlusDataSource* rfSource(nullptr);
+      rectified->GetVideoSource(rfSource);
+      rfSource->WriteToSequenceFile((outputFileName + "_a.mha").c_str());
+    }
   }
   else
   {

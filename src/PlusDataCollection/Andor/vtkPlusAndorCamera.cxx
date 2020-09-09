@@ -247,7 +247,7 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
     GetCurrentTemperature(); // updates this->CurrentTemperature
     if(this->CurrentTemperature < this->SafeTemperature)
     {
-      LOG_INFO("Temperature yet not at a safe point, turning the Cooler Off");
+      LOG_INFO("Temperature not yet at a safe point, turning the Cooler Off");
       result = CoolerOFF();
       AndorCheckErrorValueAndFailIfNeeded(result, "CoolerOff")
 

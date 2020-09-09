@@ -34,6 +34,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkPlusAndorCamera.h"
 #include "vtkPlusDataSource.h"
+#include "igtlOSUtil.h" // for Sleep
 
 #include "vtkXMLUtilities.h"
 #include "vtksys/CommandLineArguments.hxx"
@@ -156,7 +157,7 @@ int main(int argc, char* argv[])
     }
 
     LOG_DEBUG("Rendering disabled. Wait for just a few seconds to acquire data before exiting");
-    Sleep(3000); // no need to use accurate timer, it's just an approximate delay
+    igtl::Sleep(3000);
 
     vtkPlusDataSource* bSource(nullptr);
     raw->GetVideoSource(bSource);

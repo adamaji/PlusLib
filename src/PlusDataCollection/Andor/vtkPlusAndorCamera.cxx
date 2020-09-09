@@ -172,6 +172,12 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
   frameSize[0] = static_cast<unsigned>(x);
   frameSize[1] = static_cast<unsigned>(y);
 
+  result = SetImage(1, 1, 1, 1024, 1, 1024);
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetImage")
+
+  result = PrepareAcquisition();
+  AndorCheckErrorValueAndFailIfNeeded(result, "PrepareAcquisition")
+
   return PLUS_SUCCESS;
 }
 

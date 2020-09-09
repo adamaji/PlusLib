@@ -153,6 +153,9 @@ protected:
   /*! Data from the frameBuffer ivar is added to the provided data source. */
   void AddFrameToDataSource(DataSourceArray& ds);
 
+  /*! Applies bias correction for dark current, flat correction and lens distortion. */
+  void ApplyFrameCorrections();
+
   /*! This will be triggered regularly if this->StartThreadForInternalUpdates is true.
    * Framerate is controlled by this->AcquisitionRate. This is meant for debugging.
    */

@@ -5,11 +5,11 @@ See License.txt for details.
 =========================================================Plus=header=end*/
 
 #include "PlusConfigure.h"
-#include "vtkImageData.h"
 #include "vtkPlusDataSource.h"
 #include "vtkPlusAndorCamera.h"
 #include "ATMCD32D.h"
 #include "igtlOSUtil.h" // for Sleep
+#include "opencv2/imgproc.hpp"
 
 #define AndorCheckErrorValueAndFailIfNeeded(returnValue, functionName) \
   if(returnValue != DRV_SUCCESS)                                       \
@@ -358,6 +358,20 @@ void vtkPlusAndorCamera::AddFrameToDataSource(DataSourceArray& ds)
   }
 }
 
+
+// ----------------------------------------------------------------------------
+void vtkPlusAndorCamera::ApplyFrameCorrections()
+{
+  cv::Mat cvIMG(frameSize[0], frameSize[1], CV_16UC1, &rawFrame[0], cv::Mat::AUTO_STEP);
+  cv::Mat floatImage;
+  cvIMG.convertTo(floatImage, CV_32FC1);
+  cv::Mat result;
+  cv::Mat cameraIntrinsics;
+  cv::Mat distanceCoefficients;
+  cv::undistort(floatImage, result, cameraIntrinsics, distanceCoefficients);
+  result.convertTo(cvIMG, CV_16UC1);
+}
+
 // ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 {
@@ -366,7 +380,8 @@ PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
   ++this->FrameNumber;
   AddFrameToDataSource(BLIraw);
 
-  // and if OpenCV is available to rectified data source
+  ApplyFrameCorrections();
+  AddFrameToDataSource(BLIrectified);
 
   return PLUS_SUCCESS;
 }
@@ -379,7 +394,8 @@ PlusStatus vtkPlusAndorCamera::AcquireGrayscaleFrame(float exposureTime)
   ++this->FrameNumber;
   AddFrameToDataSource(GrayRaw);
 
-  // and if OpenCV is available to rectified data source
+  ApplyFrameCorrections();
+  AddFrameToDataSource(GrayRectified);
 
   return PLUS_SUCCESS;
 }

@@ -372,7 +372,7 @@ void vtkPlusAndorCamera::ApplyFrameCorrections()
   // {f_x}{0}{c_x}
   // {0}{f_y}{c_y}
   // {0}{0}{1}
-  double intrinsics[] = { 20273.05, 513.3315, 0,
+  double intrinsics[] = { 20273.05, 0, 513.3315,
                           0, 20207.06, 525.1244,
                           0, 0, 1
                         };

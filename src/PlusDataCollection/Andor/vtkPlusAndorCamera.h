@@ -148,7 +148,7 @@ protected:
   void InitializePort(DataSourceArray& port);
 
   /*! Acquire a single frame using current parameters. Data is put in the frameBuffer ivar. */
-  PlusStatus AcquireFrame(float exposure);
+  PlusStatus AcquireFrame(float exposure, int shutterMode);
 
   /*! Data from the frameBuffer ivar is added to the provided data source. */
   void AddFrameToDataSource(DataSourceArray& ds);

@@ -11,6 +11,7 @@ See License.txt for details.
 #include "igtlOSUtil.h" // for Sleep
 #include "opencv2/imgproc.hpp"
 
+
 #define AndorCheckErrorValueAndFailIfNeeded(returnValue, functionName) \
   if(returnValue != DRV_SUCCESS)                                       \
   {                                                                    \
@@ -312,12 +313,14 @@ void vtkPlusAndorCamera::WaitForCooldown()
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::AcquireFrame(float exposure)
+PlusStatus vtkPlusAndorCamera::AcquireFrame(float exposure, int shutterMode)
 {
   unsigned rawFrameSize = frameSize[0] * frameSize[1];
   rawFrame.resize(rawFrameSize, 0);
 
-  unsigned result = ::SetExposureTime(exposure);
+  unsigned result = ::SetShutter(1, shutterMode, 0, 0);
+  AndorCheckErrorValueAndFailIfNeeded(result, "SetShutter")
+  result = ::SetExposureTime(exposure);
   AndorCheckErrorValueAndFailIfNeeded(result, "SetExposureTime")
   result = StartAcquisition();
   AndorCheckErrorValueAndFailIfNeeded(result, "StartAcquisition")
@@ -362,10 +365,16 @@ void vtkPlusAndorCamera::AddFrameToDataSource(DataSourceArray& ds)
 // ----------------------------------------------------------------------------
 void vtkPlusAndorCamera::ApplyFrameCorrections()
 {
-  cv::Mat cvIMG(frameSize[0], frameSize[1], CV_16UC1, &rawFrame[0]);
+  cv::Mat cvIMG(frameSize[0], frameSize[1], CV_16UC1, &rawFrame[0]); // uses rawFrame as buffer
   cv::Mat floatImage;
   cvIMG.convertTo(floatImage, CV_32FC1);
   cv::Mat result;
+
+  AcquireFrame(0.0, 2); // read dark current image with shutter closed
+  cv::GaussianBlur(cvIMG, cvIMG, cv::Size(25, 25), 15.0, 15.0); // reduce noise
+  cv::subtract(floatImage, cvIMG, floatImage, cv::noArray(), CV_32FC1);
+
+  // TODO: add flat correction
 
   // we should read camera calibration from the config file
 
@@ -390,7 +399,7 @@ void vtkPlusAndorCamera::ApplyFrameCorrections()
 PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 {
   //WaitForCooldown();
-  AcquireFrame(this->ExposureTime);
+  AcquireFrame(this->ExposureTime, 0);
   ++this->FrameNumber;
   AddFrameToDataSource(BLIraw);
 
@@ -404,7 +413,7 @@ PlusStatus vtkPlusAndorCamera::AcquireBLIFrame()
 PlusStatus vtkPlusAndorCamera::AcquireGrayscaleFrame(float exposureTime)
 {
   //WaitForCooldown();
-  AcquireFrame(exposureTime);
+  AcquireFrame(exposureTime, 0);
   ++this->FrameNumber;
   AddFrameToDataSource(GrayRaw);
 

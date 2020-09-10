@@ -10,6 +10,7 @@ See License.txt for details.
 #include "ATMCD32D.h"
 #include "igtlOSUtil.h" // for Sleep
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 
 #define AndorCheckErrorValueAndFailIfNeeded(returnValue, functionName) \
@@ -374,7 +375,50 @@ void vtkPlusAndorCamera::ApplyFrameCorrections()
   cv::GaussianBlur(cvIMG, cvIMG, cv::Size(25, 25), 15.0, 15.0); // reduce noise
   cv::subtract(floatImage, cvIMG, floatImage, cv::noArray(), CV_32FC1);
 
-  // TODO: add flat correction
+  std::string LensFlatImage = "C:/Dev/PlusGit/BLISandbox/BLIControl/Images/MasterFlat.png"; // read from config file
+
+  cv::Mat flat = cv::imread(LensFlatImage, -1);
+
+  // Convert to 32-bit floating point for normalizing
+  cv::Mat floatFlat;
+  flat.convertTo(floatFlat, CV_32F);
+
+  // Convert to 32-bit floating point for normalizing
+  cv::Mat floatNorm;
+  flat.convertTo(floatNorm, CV_32F);
+
+  // Normalize flat correction image between [0.5, 1.0]
+  double min, max;
+  cv::minMaxLoc(floatFlat, &min, &max);
+  float imageRange = max - min;
+
+  double minNorm = min / max;
+  double maxNorm = 1.0;
+  float normRange = maxNorm - minNorm;
+  float scale;
+  float value;
+  float valueNorm;
+  int i = 0;
+  int j = 0;
+  for (j = 0; j < flat.rows; j++)
+  {
+      for (i = 0; i < flat.cols; i++)
+      {
+          value = floatFlat.at<float>(j, i);
+          scale = (value - min) / imageRange;
+
+          valueNorm = (float)((normRange * scale) + minNorm);
+          floatNorm.at<float>(j, i) = valueNorm;
+      }
+  }
+
+  cv::imwrite(LensFlatImage+"-normalized.tif", floatNorm);
+
+  // Divide the image by the 32-bit floating point correction image
+  // Then convert back to its 16-bit unsigned format
+  floatImage = floatImage / floatNorm;
+  std::cout << "Applied flat correction" << std::endl;
+
 
   // we should read camera calibration from the config file
 

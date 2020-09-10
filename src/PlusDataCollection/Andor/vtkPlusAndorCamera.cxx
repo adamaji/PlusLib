@@ -362,14 +362,28 @@ void vtkPlusAndorCamera::AddFrameToDataSource(DataSourceArray& ds)
 // ----------------------------------------------------------------------------
 void vtkPlusAndorCamera::ApplyFrameCorrections()
 {
-  cv::Mat cvIMG(frameSize[0], frameSize[1], CV_16UC1, &rawFrame[0], cv::Mat::AUTO_STEP);
+  cv::Mat cvIMG(frameSize[0], frameSize[1], CV_16UC1, &rawFrame[0]);
   cv::Mat floatImage;
   cvIMG.convertTo(floatImage, CV_32FC1);
   cv::Mat result;
-  cv::Mat cameraIntrinsics;
-  cv::Mat distanceCoefficients;
-  //cv::undistort(floatImage, result, cameraIntrinsics, distanceCoefficients);
-  //result.convertTo(cvIMG, CV_16UC1);
+
+  // we should read camera calibration from the config file
+
+  // {f_x}{0}{c_x}
+  // {0}{f_y}{c_y}
+  // {0}{0}{1}
+  double intrinsics[] = { 20273.05, 513.3315, 0,
+                          0, 20207.06, 525.1244,
+                          0, 0, 1
+                        };
+  cv::Mat cameraIntrinsics(3, 3, CV_64FC1, intrinsics);
+
+  // k_1, k_2, p_1, p_2
+  double distances[] = { -81.8617, 8523.784, 0, 0 };
+  cv::Mat distanceCoefficients(1, 4, CV_64FC1, distances);
+
+  cv::undistort(floatImage, result, cameraIntrinsics, distanceCoefficients);
+  result.convertTo(cvIMG, CV_16UC1);
 }
 
 // ----------------------------------------------------------------------------

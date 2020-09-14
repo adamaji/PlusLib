@@ -23,6 +23,11 @@ See License.txt for details.
 
 vtkStandardNewMacro(vtkPlusAndorCamera);
 
+// put these here so there is no public dependence on OpenCV
+cv::Mat cvCameraIntrinsics;
+cv::Mat cvDistanceCoefficients;
+cv::Mat cvFlatCorrection;
+
 // ----------------------------------------------------------------------------
 void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
 {
@@ -38,6 +43,9 @@ void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "CoolTemperature: " << CoolTemperature << std::endl;
   os << indent << "SafeTemperature: " << SafeTemperature << std::endl;
   os << indent << "CurrentTemperature: " << CurrentTemperature << std::endl;
+  os << indent << "CameraIntrinsics: " << cvCameraIntrinsics << std::endl;
+  os << indent << "DistanceCoefficients: " << cvDistanceCoefficients << std::endl;
+  os << indent << "FlatCorrection: " << flatCorrection << std::endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -45,8 +53,6 @@ PlusStatus vtkPlusAndorCamera::ReadConfiguration(vtkXMLDataElement* rootConfigEl
 {
   LOG_TRACE("vtkPlusAndorCamera::ReadConfiguration");
   XML_FIND_DEVICE_ELEMENT_REQUIRED_FOR_READING(deviceConfig, rootConfigElement);
-
-  // Load the camera properties parameters -----------------------------------------------
 
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, Shutter, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(float, ExposureTime, deviceConfig);
@@ -56,6 +62,22 @@ PlusStatus vtkPlusAndorCamera::ReadConfiguration(vtkXMLDataElement* rootConfigEl
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, TriggerMode, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, CoolTemperature, deviceConfig);
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, SafeTemperature, deviceConfig);
+
+  deviceConfig->GetVectorAttribute("CameraIntrinsics", 9, cameraIntrinsics);
+  deviceConfig->GetVectorAttribute("DistanceCoefficients", 4, distanceCoefficients);
+  flatCorrection = deviceConfig->GetAttribute("FlatCorrection");
+
+  cvCameraIntrinsics = cv::Mat(3, 3, CV_64FC1, cameraIntrinsics);
+  cvDistanceCoefficients = cv::Mat(1, 4, CV_64FC1, distanceCoefficients);
+  try
+  {
+    cvFlatCorrection = cv::imread(flatCorrection, -1);
+  }
+  catch(...)
+  {
+    LOG_ERROR("Could not load flat correction image from file: " << flatCorrection);
+    return PLUS_FAIL;
+  }
 
   return PLUS_SUCCESS;
 }
@@ -73,6 +95,10 @@ PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigE
   deviceConfig->SetIntAttribute("TriggerMode", this->TriggerMode);
   deviceConfig->SetIntAttribute("CoolTemperature", this->CoolTemperature);
   deviceConfig->SetIntAttribute("SafeTemperature", this->SafeTemperature);
+
+  deviceConfig->SetVectorAttribute("CameraIntrinsics", 9, cameraIntrinsics);
+  deviceConfig->SetVectorAttribute("DistanceCoefficients", 4, distanceCoefficients);
+  deviceConfig->SetAttribute("FlatCorrection", flatCorrection.c_str());
 
   return PLUS_SUCCESS;
 }
@@ -373,69 +399,14 @@ void vtkPlusAndorCamera::ApplyFrameCorrections()
 
   AcquireFrame(0.0, 2); // read dark current image with shutter closed
   cv::GaussianBlur(cvIMG, cvIMG, cv::Size(25, 25), 15.0, 15.0); // reduce noise
-  cv::subtract(floatImage, cvIMG, floatImage, cv::noArray(), CV_32FC1);
-
-  std::string LensFlatImage = "C:/Dev/PlusGit/BLISandbox/BLIControl/Images/MasterFlat.png"; // read from config file
-
-  cv::Mat flat = cv::imread(LensFlatImage, -1);
-
-  // Convert to 32-bit floating point for normalizing
-  cv::Mat floatFlat;
-  flat.convertTo(floatFlat, CV_32F);
-
-  // Convert to 32-bit floating point for normalizing
-  cv::Mat floatNorm;
-  flat.convertTo(floatNorm, CV_32F);
-
-  // Normalize flat correction image between [0.5, 1.0]
-  double min, max;
-  cv::minMaxLoc(floatFlat, &min, &max);
-  float imageRange = max - min;
-
-  double minNorm = min / max;
-  double maxNorm = 1.0;
-  float normRange = maxNorm - minNorm;
-  float scale;
-  float value;
-  float valueNorm;
-  int i = 0;
-  int j = 0;
-  for (j = 0; j < flat.rows; j++)
-  {
-      for (i = 0; i < flat.cols; i++)
-      {
-          value = floatFlat.at<float>(j, i);
-          scale = (value - min) / imageRange;
-
-          valueNorm = (float)((normRange * scale) + minNorm);
-          floatNorm.at<float>(j, i) = valueNorm;
-      }
-  }
-
-  cv::imwrite(LensFlatImage+"-normalized.tif", floatNorm);
+  cv::subtract(floatImage, cvIMG, floatImage, cv::noArray(), CV_32FC1); // constant bias correction
 
   // Divide the image by the 32-bit floating point correction image
-  // Then convert back to its 16-bit unsigned format
-  floatImage = floatImage / floatNorm;
+  floatImage = floatImage / cvFlatCorrection;
   std::cout << "Applied flat correction" << std::endl;
 
-
-  // we should read camera calibration from the config file
-
-  // {f_x}{0}{c_x}
-  // {0}{f_y}{c_y}
-  // {0}{0}{1}
-  double intrinsics[] = { 20273.05, 0, 513.3315,
-                          0, 20207.06, 525.1244,
-                          0, 0, 1
-                        };
-  cv::Mat cameraIntrinsics(3, 3, CV_64FC1, intrinsics);
-
-  // k_1, k_2, p_1, p_2
-  double distances[] = { -81.8617, 8523.784, 0, 0 };
-  cv::Mat distanceCoefficients(1, 4, CV_64FC1, distances);
-
-  cv::undistort(floatImage, result, cameraIntrinsics, distanceCoefficients);
+  // OpenCV's lens distortion correction
+  cv::undistort(floatImage, result, cvCameraIntrinsics, cvDistanceCoefficients);
   result.convertTo(cvIMG, CV_16UC1);
 }
 

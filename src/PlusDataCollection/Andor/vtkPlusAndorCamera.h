@@ -190,6 +190,13 @@ protected:
   std::vector<uint16_t> rawFrame;
   double currentTime = UNDEFINED_TIMESTAMP;
 
+  // {f_x}{0}{c_x}
+  // {0}{f_y}{c_y}
+  // {0}{0}{1}
+  double cameraIntrinsics[9] = { 0 };
+  double distanceCoefficients[4] = { 0 }; // k_1, k_2, p_1, p_2
+  std::string flatCorrection; // filepath to [0.0,1.0] normalized master flat image
+
   DataSourceArray BLIraw;
   DataSourceArray BLIrectified;
   DataSourceArray GrayRaw;

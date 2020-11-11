@@ -139,6 +139,8 @@ public:
 
   /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
   void WaitForCooldown();
+  /*! Wait for the camera to reach safe temperature for poweroff (e.g. 10°C). */
+  void WaitForWarmup();
 
   /*! Check the return status of Andor SDK functions. */
   unsigned int checkStatus(unsigned int returnStatus, std::string functionName);

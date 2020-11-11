@@ -443,6 +443,15 @@ PlusStatus vtkPlusAndorCamera::AcquireGrayscaleFrame(int binning, int vsSpeed, i
 }
 
 // ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::AcquireBiasFrame(std::string biasFilePath, int binning, int vsSpeed, int hsSpeed)
+{
+  AcquireFrame(0, 2, binning, vsSpeed, hsSpeed);
+  ++this->FrameNumber;
+  cv::Mat saveImage(frameSize[0], frameSize[1], CV_16UC1, &rawFrame[0]);
+  cv::imwrite(biasFilePath, saveImage);
+}
+
+// ----------------------------------------------------------------------------
 PlusStatus vtkPlusAndorCamera::SetBiasCorrectionImage(std::string biasFilePath)
 {
   try

@@ -134,6 +134,9 @@ public:
   /*! -1 uses currently active settings. */
   PlusStatus AcquireGrayscaleFrame(int binning, int vsSpeed, int hsSpeed, float exposureTime);
 
+  /*! Convenience function to save a bias frame for a certain binning/speed configuration. */
+  PlusStatus AcquireBiasFrame(std::string biasFilePath, int binning, int vsSpeed, int hsSpeed);
+
   /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
   void WaitForCooldown();
 

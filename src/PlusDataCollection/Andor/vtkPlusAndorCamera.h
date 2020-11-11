@@ -194,6 +194,16 @@ protected:
   PlusStatus SetUseCooling(bool useCooling);
   bool GetUseCooling();
 
+  /*! Cooler Status and Mode control. When CoolerMode is set on, the cooler
+      will be kept online when the camera is shutdown. This is helpful to
+      reduce the cooling cycles the camera undergoes. Turning the Cooler ON
+      and OFF should be done sparingly for the same reason.
+  */
+  int IsCoolerOn();
+  PlusStatus TurnCoolerON();
+  PlusStatus TurnCoolerOFF();
+  PlusStatus SetCoolerMode(int mode);
+
   int Shutter = 0;
   float ExposureTime = 1.0; // seconds
   int HorizontalBins = 1;
@@ -215,6 +225,7 @@ protected:
 
   /*! Temperatures are in °C (degrees Celsius) */
   bool UseCooling = true;  // dev param to bypass cooling procedures
+  int CoolerMode = 0;  // whether to return to ambient temperature on ShutDown
   int CoolTemperature = -50;
   int SafeTemperature = 5;
   float CurrentTemperature = 0.123456789; // easy to spot as uninitialized

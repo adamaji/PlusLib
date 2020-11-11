@@ -179,17 +179,6 @@ PlusStatus vtkPlusAndorCamera::InitializeAndorCamera()
     return PLUS_FAIL;
   }
 
-  if(this->UseCooling)
-  {
-    result = checkStatus(CoolerON(), "CoolerON");
-    if(result == DRV_SUCCESS)
-    {
-      LOG_INFO("Temperature controller switched ON.");
-    }
-    checkStatus(SetTemperature(this->CoolTemperature), "SetTemperature");
-  }
-  GetCurrentTemperature(); // logs the status and temperature
-
   int x, y;
   checkStatus(GetDetector(&x, &y), "GetDetector");
   frameSize[0] = static_cast<unsigned>(x);
@@ -261,22 +250,12 @@ PlusStatus vtkPlusAndorCamera::InternalDisconnect()
   }
 
   int status;
-  checkStatus(IsCoolerOn(&status), "IsCoolerOn");
+  checkStatus(::IsCoolerOn(&status), "IsCoolerOn");
 
-  if(status)
+  if(status && this->CoolerMode == 0)
   {
-    GetCurrentTemperature(); // updates this->CurrentTemperature
-    if(this->CurrentTemperature < this->SafeTemperature)
-    {
-      LOG_INFO("Temperature not yet at a safe point, turning the Cooler Off");
-      checkStatus(CoolerOFF(), "CoolerOff");
-
-      while(this->CurrentTemperature < this->SafeTemperature)
-      {
-        igtl::Sleep(5000); // wait a bit
-        GetCurrentTemperature(); // logs the status and temperature
-      }
-    }
+    LOG_INFO("CoolerMode 0 and Cooler is still ON. Turning off the cooler and waiting for warmup. Do not unplug the camera from power.");
+    WaitForWarmup();
   }
 
   checkStatus(FreeInternalMemory(), "FreeInternalMemory");
@@ -318,9 +297,39 @@ void vtkPlusAndorCamera::WaitForCooldown()
   {
     return;
   }
+  int status;
+  checkStatus(::IsCoolerOn(&status), "IsCoolerOn");
+  if(!status)
+  {
+    TurnCoolerON();
+  }
   while(checkStatus(GetTemperatureF(&this->CurrentTemperature), "GetTemperatureF") != DRV_TEMPERATURE_STABILIZED)
   {
     igtl::Sleep(5000); // wait a bit
+  }
+}
+
+// ----------------------------------------------------------------------------
+void vtkPlusAndorCamera::WaitForWarmup()
+{
+  if(this->UseCooling == false)
+  {
+    return;
+  }
+  int status;
+  checkStatus(::IsCoolerOn(&status), "IsCoolerOn");
+  if(status)
+  {
+    TurnCoolerOFF();
+  }
+  GetCurrentTemperature(); // updates this->CurrentTemperature
+  if(this->CurrentTemperature < this->SafeTemperature)
+  {
+    while(this->CurrentTemperature < this->SafeTemperature)
+    {
+      igtl::Sleep(5000); // wait a bit
+      GetCurrentTemperature(); // logs the status and temperature
+    }
   }
 }
 
@@ -624,28 +633,11 @@ PlusStatus vtkPlusAndorCamera::SetUseCooling(bool useCooling)
   this->UseCooling = useCooling;
   if(useCooling && coolerStatus == 0)
   {
-    // Turn the cooler on if we are using cooling
-    result = checkStatus(CoolerON(), "CoolerON");
-    if(result == DRV_SUCCESS)
-    {
-      LOG_INFO("Temperature controller switched ON.");
-    }
-    checkStatus(SetTemperature(this->CoolTemperature), "SetTemperature");
+    TurnCoolerON();
   }
   else if(useCooling == false && coolerStatus == 1)
   {
-    // Make sure that if the cooler is on, we wait for warmup
-    result = checkStatus(CoolerOFF(), "CoolerOFF");
-    if(result == DRV_SUCCESS)
-    {
-      LOG_INFO("Temperature controller switched OFF.");
-    }
-
-    while(this->CurrentTemperature < this->SafeTemperature)
-    {
-      igtl::Sleep(5000); // wait a bit
-      GetCurrentTemperature(); // logs the status and temperature
-    }
+    TurnCoolerOFF();
   }
 
   return PLUS_SUCCESS;
@@ -655,6 +647,63 @@ PlusStatus vtkPlusAndorCamera::SetUseCooling(bool useCooling)
 bool vtkPlusAndorCamera::GetUseCooling()
 {
   return this->UseCooling;
+}
+
+// ----------------------------------------------------------------------------
+int vtkPlusAndorCamera::IsCoolerOn()
+{
+  int coolerStatus = 1;
+  unsigned result = checkStatus(::IsCoolerOn(&coolerStatus), "IsCoolerOn");
+  if(result == DRV_SUCCESS)
+  {
+    return coolerStatus;
+  }
+  return -1;
+}
+
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::TurnCoolerON()
+{
+  unsigned result = checkStatus(CoolerON(), "CoolerON");
+  if(result == DRV_SUCCESS)
+  {
+    LOG_INFO("Temperature controller switched ON.");
+    checkStatus(SetTemperature(this->CoolTemperature), "SetTemperature");
+    return PLUS_SUCCESS;
+  }
+  return PLUS_FAIL;
+}
+
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::TurnCoolerOFF()
+{
+  unsigned result = checkStatus(CoolerOFF(), "CoolerOFF");
+  if(result == DRV_SUCCESS)
+  {
+    LOG_INFO("Temperature controller switched OFF.");
+    return PLUS_SUCCESS;
+  }
+  return PLUS_FAIL;
+}
+
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::SetCoolerMode(int mode)
+{
+  unsigned result = checkStatus(::SetCoolerMode(mode), "SetCoolerMode");
+  if (result == DRV_SUCCESS)
+  {
+    this->CoolerMode = mode;
+    if (mode == 1)
+    {
+      LOG_INFO("Cooler mode set to 1. Temperature will be maintained on ShutDown.");
+    }
+    else
+    {
+      LOG_INFO("Cooler mode set to 0. Camera will return to ambient temperature on ShutDown.");
+    }
+    return PLUS_SUCCESS;
+  }
+  return PLUS_FAIL;
 }
 
 // ----------------------------------------------------------------------------

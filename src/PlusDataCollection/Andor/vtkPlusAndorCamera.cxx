@@ -449,6 +449,7 @@ PlusStatus vtkPlusAndorCamera::AcquireBiasFrame(std::string biasFilePath, int bi
   ++this->FrameNumber;
   cv::Mat saveImage(frameSize[0], frameSize[1], CV_16UC1, &rawFrame[0]);
   cv::imwrite(biasFilePath, saveImage);
+  return PLUS_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------

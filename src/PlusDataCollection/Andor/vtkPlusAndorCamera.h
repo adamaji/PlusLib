@@ -129,7 +129,7 @@ public:
   }
 
   /*! -1 uses currently active settings. */
-  PlusStatus AcquireBLIFrame(int binning, int vsSpeed, int hsSpeed);
+  PlusStatus AcquireBLIFrame(int binning, int vsSpeed, int hsSpeed, float exposureTime);
 
   /*! -1 uses currently active settings. */
   PlusStatus AcquireGrayscaleFrame(int binning, int vsSpeed, int hsSpeed, float exposureTime);

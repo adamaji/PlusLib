@@ -415,10 +415,10 @@ void vtkPlusAndorCamera::ApplyFrameCorrections()
 }
 
 // ----------------------------------------------------------------------------
-PlusStatus vtkPlusAndorCamera::AcquireBLIFrame(int binning, int vsSpeed, int hsSpeed)
+PlusStatus vtkPlusAndorCamera::AcquireBLIFrame(int binning, int vsSpeed, int hsSpeed, float exposureTime)
 {
   WaitForCooldown();
-  AcquireFrame(this->ExposureTime, 0, binning, vsSpeed, hsSpeed);
+  AcquireFrame(exposureTime, 0, binning, vsSpeed, hsSpeed);
   ++this->FrameNumber;
   AddFrameToDataSource(BLIraw);
 

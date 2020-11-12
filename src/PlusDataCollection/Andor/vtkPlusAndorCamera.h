@@ -184,6 +184,12 @@ protected:
   /*! Applies bias correction for dark current, flat correction and lens distortion. */
   void ApplyFrameCorrections();
 
+  /*! Flag whether to call ApplyFrameCorrections on the raw acquired frame on acquisition
+      or to skip frame corrections.
+   */
+  PlusStatus SetUseFrameCorrections(bool UseFrameCorrections);
+  bool GetUseFrameCorrections();
+
   /*! This will be triggered regularly if this->StartThreadForInternalUpdates is true.
    * Framerate is controlled by this->AcquisitionRate. This is meant for debugging.
    */
@@ -216,6 +222,7 @@ protected:
   int HSSpeed[2] = { 0, 1 };  // type, index
   int VSSpeed = 0;  // index
   int PreAmpGain = 0;
+  bool UseFrameCorrections = true;
 
   // TODO: Need to handle differet cases for read/acquisiton modes?
 

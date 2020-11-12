@@ -41,6 +41,7 @@ void vtkPlusAndorCamera::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "CurrentTemperature: " << CurrentTemperature << std::endl;
   os << indent << "CameraIntrinsics: " << cvCameraIntrinsics << std::endl;
   os << indent << "DistanceCoefficients: " << cvDistanceCoefficients << std::endl;
+  os << indent << "UseFrameCorrections: " << UseFrameCorrections << std::endl;
   os << indent << "FlatCorrection: " << flatCorrection << std::endl;
   os << indent << "BiasCorrection: " << biasCorrection << std::endl;
 }
@@ -67,6 +68,7 @@ PlusStatus vtkPlusAndorCamera::ReadConfiguration(vtkXMLDataElement* rootConfigEl
   XML_READ_SCALAR_ATTRIBUTE_OPTIONAL(int, VerticalBins, deviceConfig);
 
   XML_READ_BOOL_ATTRIBUTE_OPTIONAL(UseCooling, deviceConfig);
+  XML_READ_BOOL_ATTRIBUTE_OPTIONAL(UseFrameCorrections, deviceConfig);
 
   deviceConfig->GetVectorAttribute("HSSpeed", 2, HSSpeed);
   deviceConfig->GetVectorAttribute("CameraIntrinsics", 9, cameraIntrinsics);
@@ -106,6 +108,7 @@ PlusStatus vtkPlusAndorCamera::WriteConfiguration(vtkXMLDataElement* rootConfigE
   deviceConfig->SetAttribute("BiasCorrection", biasCorrection.c_str());
 
   XML_WRITE_BOOL_ATTRIBUTE(UseCooling, deviceConfig);
+  XML_WRITE_BOOL_ATTRIBUTE(UseFrameCorrections, deviceConfig);
 
   return PLUS_SUCCESS;
 }
@@ -422,8 +425,11 @@ PlusStatus vtkPlusAndorCamera::AcquireBLIFrame(int binning, int vsSpeed, int hsS
   ++this->FrameNumber;
   AddFrameToDataSource(BLIraw);
 
-  ApplyFrameCorrections();
-  AddFrameToDataSource(BLIrectified);
+  if(this->UseFrameCorrections)
+  {
+    ApplyFrameCorrections();
+    AddFrameToDataSource(BLIrectified);
+  }
 
   return PLUS_SUCCESS;
 }
@@ -436,8 +442,11 @@ PlusStatus vtkPlusAndorCamera::AcquireGrayscaleFrame(int binning, int vsSpeed, i
   ++this->FrameNumber;
   AddFrameToDataSource(GrayRaw);
 
-  ApplyFrameCorrections();
-  AddFrameToDataSource(GrayRectified);
+  if(this->UseFrameCorrections)
+  {
+    ApplyFrameCorrections();
+    AddFrameToDataSource(GrayRectified);
+  }
 
   return PLUS_SUCCESS;
 }
@@ -633,6 +642,19 @@ PlusStatus vtkPlusAndorCamera::SetTriggerMode(int triggerMode)
 int vtkPlusAndorCamera::GetTriggerMode()
 {
   return this->TriggerMode;
+}
+
+// ----------------------------------------------------------------------------
+PlusStatus vtkPlusAndorCamera::SetUseFrameCorrections(bool useFrameCorrections)
+{
+  this->UseFrameCorrections = useFrameCorrections;
+  return PLUS_SUCCESS;
+}
+
+// ----------------------------------------------------------------------------
+bool vtkPlusAndorCamera::GetUseFrameCorrections()
+{
+  return this->UseFrameCorrections;
 }
 
 // ----------------------------------------------------------------------------

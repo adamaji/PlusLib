@@ -137,6 +137,7 @@ public:
   /*! Convenience function to save a bias frame for a certain binning/speed configuration. */
   PlusStatus AcquireBiasFrame(std::string biasFilePath, int binning, int vsSpeed, int hsSpeed);
 
+  PlusStatus SetCoolerMode(int mode);
   /*! Wait for the camera to reach operating temperature (e.g. -70°C). */
   void WaitForCooldown();
   /*! Wait for the camera to reach safe temperature for poweroff (e.g. 10°C). */
@@ -213,7 +214,6 @@ protected:
   int IsCoolerOn();
   PlusStatus TurnCoolerON();
   PlusStatus TurnCoolerOFF();
-  PlusStatus SetCoolerMode(int mode);
 
   int Shutter = 0;
   float ExposureTime = 1.0; // seconds

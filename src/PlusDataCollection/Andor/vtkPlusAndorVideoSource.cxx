@@ -564,7 +564,7 @@ PlusStatus vtkPlusAndorVideoSource::AcquireFrame()
   // https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-ikon-m-934-specifications.pdf
   // so we choose 16-bit unsigned
   // GetMostRecentImage() is 32 bit signed variant
-  checkStatus(GetAcquiredData16(&rawFrame[0], rawFrameSize), "GetAcquiredData16");
+  checkStatus(GetOldestImage16(&rawFrame[0], rawFrameSize), "GetOldestImage16");
 
   return PLUS_SUCCESS;
 }

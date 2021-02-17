@@ -579,8 +579,8 @@ void vtkPlusAndorVideoSource::AddFrameToDataSource(DataSourceArray& ds)
                       frameSize, VTK_UNSIGNED_SHORT,
                       1, US_IMG_BRIGHTNESS, 0,
                       this->FrameNumber,
-                      this->currentTime,
-                      UNDEFINED_TIMESTAMP,
+                      currentTime,
+                      currentTime,  // just use the unfiltered timestamp so we don't drop frames
                       &this->CustomFields
                      ) != PLUS_SUCCESS)
     {

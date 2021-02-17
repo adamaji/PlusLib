@@ -590,7 +590,7 @@ void vtkPlusAndorVideoSource::AddFrameToDataSource(DataSourceArray& ds)
     {
       LOG_INFO("Success adding item to AndorCamera video source " << ds[i]->GetSourceId());
     }
-    std::cout << "NUMBER OF ITEMS IN THE BUFFER: " << ds[i]->GetNumberOfItems() << std::endl;
+    std::cout << "NUMBER OF ITEMS IN THE BUFFER: " << ds[i]->GetNumberOfItems() << " " << this->currentTime << std::endl;
   }
   unsigned status = checkStatus(FreeInternalMemory(), "FreeInternalMemory");
   if (status != DRV_SUCCESS)

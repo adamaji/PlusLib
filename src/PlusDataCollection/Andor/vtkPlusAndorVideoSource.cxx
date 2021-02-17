@@ -591,6 +591,11 @@ void vtkPlusAndorVideoSource::AddFrameToDataSource(DataSourceArray& ds)
       LOG_INFO("Success adding item to AndorCamera video source " << ds[i]->GetSourceId());
     }
   }
+  unsigned status = checkStatus(FreeInternalMemory(), "FreeInternalMemory");
+  if (status != DRV_SUCCESS)
+  {
+    LOG_ERROR("Error freeing device memory!");
+  }
 }
 
 // ----------------------------------------------------------------------------

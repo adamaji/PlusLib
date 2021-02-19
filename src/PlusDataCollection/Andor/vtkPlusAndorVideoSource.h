@@ -276,7 +276,7 @@ protected:
   using DataSourceArray = std::vector<vtkPlusDataSource*>;
 
   /*! Initialize all data sources of the provided port */
-  void InitializePort(DataSourceArray& port);
+  void InitializePort(DataSourceArray& port, bool processed);
 
   void AdjustBuffers(int horizontalBins, int verticalBins);
   void AdjustSpacing(int horizontalBins, int verticalBins);
@@ -287,8 +287,8 @@ protected:
   /*! Acquire a single frame using current parameters. Data is put in the frameBuffer ivar. */
   PlusStatus AcquireFrame();
 
-  /*! Data from the frameBuffer ivar is added to the provided data source. */
-  void AddFrameToDataSource(DataSourceArray& ds);
+  /*! Data from the frameBuffer ivar is added to the provided data source. Send processed=true to read from the processedIMG buffer.*/
+  void AddFrameToDataSource(DataSourceArray& ds, bool processed);
 
   /*! Calculates which cells need bad-pixel correction for the given binning level. */
   void FindBadCells(int binning);
@@ -381,6 +381,7 @@ protected:
 
   FrameSizeType frameSize = {1024, 1024, 1};
   std::vector<uint16_t> rawFrame;
+  std::vector<float> processedFrameBuffer;
   double currentTime = UNDEFINED_TIMESTAMP;
 
   // {f_x}{0}{c_x}

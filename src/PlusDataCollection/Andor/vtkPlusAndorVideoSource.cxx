@@ -300,11 +300,18 @@ PlusStatus vtkPlusAndorVideoSource::InitializeAndorCamera()
 }
 
 // ----------------------------------------------------------------------------
-void vtkPlusAndorVideoSource::InitializePort(DataSourceArray& port)
+void vtkPlusAndorVideoSource::InitializePort(DataSourceArray& port, bool processed)
 {
   for(unsigned i = 0; i < port.size(); i++)
   {
-    port[i]->SetPixelType(VTK_UNSIGNED_SHORT);
+    if (processed)
+    {
+      port[i]->SetPixelType(VTK_FLOAT);
+    }
+    else
+    {
+      port[i]->SetPixelType(VTK_UNSIGNED_SHORT);
+    }
     port[i]->SetImageType(US_IMG_BRIGHTNESS);
     port[i]->SetOutputImageOrientation(US_IMG_ORIENT_MF);
     port[i]->SetInputImageOrientation(US_IMG_ORIENT_MF);
@@ -340,10 +347,10 @@ PlusStatus vtkPlusAndorVideoSource::InternalConnect()
     BLIRaw.push_back(aSource); // this is the default port
   }
 
-  this->InitializePort(BLIRaw);
-  this->InitializePort(BLICorrected);
-  this->InitializePort(GrayRaw);
-  this->InitializePort(GrayCorrected);
+  this->InitializePort(BLIRaw, false);
+  this->InitializePort(BLICorrected, true);
+  this->InitializePort(GrayRaw, false);
+  this->InitializePort(GrayCorrected, true);
 
   this->PrepareAcquisition();
 
@@ -550,6 +557,7 @@ PlusStatus vtkPlusAndorVideoSource::AcquireFrame()
 
   unsigned rawFrameSize = frameSize[0] * frameSize[1];
   rawFrame.resize(rawFrameSize, 0);
+  processedFrameBuffer.resize(rawFrameSize, 0);
 
   checkStatus(StartAcquisition(), "StartAcquisition");
   unsigned result = checkStatus(::WaitForAcquisition(), "WaitForAcquisition");
@@ -570,25 +578,47 @@ PlusStatus vtkPlusAndorVideoSource::AcquireFrame()
 }
 
 // ----------------------------------------------------------------------------
-void vtkPlusAndorVideoSource::AddFrameToDataSource(DataSourceArray& ds)
+void vtkPlusAndorVideoSource::AddFrameToDataSource(DataSourceArray& ds, bool processed)
 {
   for(unsigned i = 0; i < ds.size(); i++)
   {
-    if(ds[i]->AddItem(&rawFrame[0],
-                      US_IMG_ORIENT_MF,
-                      frameSize, VTK_UNSIGNED_SHORT,
-                      1, US_IMG_BRIGHTNESS, 0,
-                      this->FrameNumber,
-                      currentTime,
-                      currentTime,  // just use the unfiltered timestamp so we don't drop frames
-                      &this->CustomFields
-                     ) != PLUS_SUCCESS)
+    if (!processed)
     {
-      LOG_WARNING("Error adding item to AndorCamera video source " << ds[i]->GetSourceId());
+      if(ds[i]->AddItem(&rawFrame[0],
+                        US_IMG_ORIENT_MF,
+                        frameSize, VTK_UNSIGNED_SHORT,
+                        1, US_IMG_BRIGHTNESS, 0,
+                        this->FrameNumber,
+                        currentTime,
+                        currentTime,  // just use the unfiltered timestamp so we don't drop frames
+                        &this->CustomFields
+                      ) != PLUS_SUCCESS)
+      {
+        LOG_WARNING("Error adding item to AndorCamera video source " << ds[i]->GetSourceId());
+      }
+      else
+      {
+        LOG_INFO("Success adding item to AndorCamera video source " << ds[i]->GetSourceId());
+      }
     }
     else
     {
-      LOG_INFO("Success adding item to AndorCamera video source " << ds[i]->GetSourceId());
+      if(ds[i]->AddItem(&processedFrameBuffer[0],
+                        US_IMG_ORIENT_MF,
+                        frameSize, VTK_FLOAT,
+                        1, US_IMG_BRIGHTNESS, 0,
+                        this->FrameNumber,
+                        currentTime,
+                        currentTime,  // just use the unfiltered timestamp so we don't drop frames
+                        &this->CustomFields
+                      ) != PLUS_SUCCESS)
+      {
+        LOG_WARNING("Error adding item to AndorCamera video source " << ds[i]->GetSourceId());
+      }
+      else
+      {
+        LOG_INFO("Success adding item to AndorCamera video source " << ds[i]->GetSourceId());
+      }
     }
   }
 }
@@ -758,7 +788,8 @@ void vtkPlusAndorVideoSource::ApplyFrameCorrections(int binning)
     LOG_INFO("Applied multiplicative flat correction");
   }
 
-  result.convertTo(cvIMG, CV_16UC1);
+  cv::Mat processedIMG(frameSize[0], frameSize[1], CV_32FC1, &processedFrameBuffer[0]);
+  result.convertTo(processedIMG, CV_32FC1);
 }
 
 // ----------------------------------------------------------------------------
@@ -797,12 +828,12 @@ void* vtkPlusAndorVideoSource::AcquireBLIFrameThread(vtkMultiThreader::ThreadInf
     return NULL;
   }
   ++device->FrameNumber;
-  device->AddFrameToDataSource(device->BLIRaw);
+  device->AddFrameToDataSource(device->BLIRaw, false);
 
   if(device->UseFrameCorrections)
   {
     device->ApplyFrameCorrections(device->effectiveHBins);
-    device->AddFrameToDataSource(device->BLICorrected);
+    device->AddFrameToDataSource(device->BLICorrected, true);
   }
 
   int tempID = device->threadID;
@@ -848,12 +879,12 @@ void* vtkPlusAndorVideoSource::AcquireGrayscaleFrameThread(vtkMultiThreader::Thr
     return NULL;
   }
   ++device->FrameNumber;
-  device->AddFrameToDataSource(device->GrayRaw);
+  device->AddFrameToDataSource(device->GrayRaw, false);
 
   if(device->UseFrameCorrections)
   {
     device->ApplyFrameCorrections(device->effectiveHBins);
-    device->AddFrameToDataSource(device->GrayCorrected);
+    device->AddFrameToDataSource(device->GrayCorrected, true);
   }
 
   int tempID = device->threadID;
